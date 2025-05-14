@@ -1,88 +1,158 @@
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "@/components/ui/sonner";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import AppLayout from "@/components/AppLayout";
+import { Wrench, Tool, Package } from "lucide-react";
+
+type CountStats = {
+  machines: number;
+  tools: number;
+  materials: number;
+};
 
 export default function Dashboard() {
-  const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
-  
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<CountStats>({
+    machines: 0,
+    tools: 0,
+    materials: 0,
+  });
+
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        toast.error(error.message);
-        return;
-      }
-      
-      if (!session) {
-        navigate("/login");
-        return;
-      }
-      
-      setUser(session.user);
-    };
-    
-    getUser();
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_OUT") {
-        navigate("/login");
-      } else if (session) {
-        setUser(session.user);
-      }
-    });
-    
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
-  
-  const handleSignOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) throw error;
-      
-      toast.success("Signed out successfully");
-      navigate("/login");
-    } catch (error: any) {
-      toast.error(error.message || "An error occurred signing out");
+    async function getUser() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user);
+      setLoading(false);
     }
-  };
-  
-  if (!user) {
+
+    getUser();
+  }, []);
+
+  useEffect(() => {
+    async function fetchStats() {
+      // Get counts from each table
+      const [machinesResponse, toolsResponse, materialsResponse] = await Promise.all([
+        supabase.from("machines").select("id", { count: "exact", head: true }),
+        supabase.from("tooling").select("id", { count: "exact", head: true }),
+        supabase.from("materials").select("id", { count: "exact", head: true }),
+      ]);
+
+      setStats({
+        machines: machinesResponse.count || 0,
+        tools: toolsResponse.count || 0,
+        materials: materialsResponse.count || 0,
+      });
+    }
+
+    fetchStats();
+  }, []);
+
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <p>Loading...</p>
       </div>
     );
   }
-  
+
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-      <div className="max-w-5xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <Button onClick={handleSignOut}>Sign Out</Button>
-        </div>
-        
-        <div className="grid gap-6">
+    <AppLayout>
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Welcome to MechAI</CardTitle>
-              <CardDescription>You are signed in as {user.email}</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Machines</CardTitle>
+              <Wrench className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <p>Your dashboard content will appear here.</p>
+              <div className="text-2xl font-bold">{stats.machines}</div>
+              <p className="text-xs text-muted-foreground">Total machines</p>
             </CardContent>
+            <CardFooter>
+              <Link to="/app/machines">
+                <Button size="sm" variant="outline">
+                  View All
+                </Button>
+              </Link>
+            </CardFooter>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Tooling</CardTitle>
+              <Tool className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.tools}</div>
+              <p className="text-xs text-muted-foreground">Total tools</p>
+            </CardContent>
+            <CardFooter>
+              <Link to="/app/tooling">
+                <Button size="sm" variant="outline">
+                  View All
+                </Button>
+              </Link>
+            </CardFooter>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Materials</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.materials}</div>
+              <p className="text-xs text-muted-foreground">Total materials</p>
+            </CardContent>
+            <CardFooter>
+              <Link to="/app/materials">
+                <Button size="sm" variant="outline">
+                  View All
+                </Button>
+              </Link>
+            </CardFooter>
           </Card>
         </div>
+
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Link to="/app/machines">
+              <Button className="w-full" variant="outline">
+                <Wrench className="mr-2 h-4 w-4" />
+                Manage Machines
+              </Button>
+            </Link>
+            <Link to="/app/tooling">
+              <Button className="w-full" variant="outline">
+                <Tool className="mr-2 h-4 w-4" />
+                Manage Tooling
+              </Button>
+            </Link>
+            <Link to="/app/materials">
+              <Button className="w-full" variant="outline">
+                <Package className="mr-2 h-4 w-4" />
+                Manage Materials
+              </Button>
+            </Link>
+          </div>
+        </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }

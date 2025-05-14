@@ -95,10 +95,10 @@ export default function MaterialsPage() {
     },
   });
 
-  // Mutation to add a new material
+  // Fix the mutation to ensure all required fields are provided
   const addMaterialMutation = useMutation({
     mutationFn: async (values: MaterialFormValues) => {
-      // This fixes the type issue by ensuring required fields are present
+      // Fix to ensure all required fields are properly set
       const materialData = {
         name: values.name,
         stock_type: values.stock_type,

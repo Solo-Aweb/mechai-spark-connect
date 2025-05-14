@@ -81,10 +81,10 @@ export default function MachinesPage() {
     },
   });
 
-  // Define the mutation to add a new machine
+  // Fix the mutation to ensure all required fields are provided
   const addMachineMutation = useMutation({
     mutationFn: async (newMachine: MachineFormValues) => {
-      // This fixes the type issue by ensuring required fields are present
+      // Ensure all required fields are explicitly set
       const machineData = {
         name: newMachine.name,
         type: newMachine.type,

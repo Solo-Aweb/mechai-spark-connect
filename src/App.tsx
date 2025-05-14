@@ -14,6 +14,8 @@ import AuthRequired from "./components/AuthRequired";
 import MachinesPage from "./pages/MachinesPage";
 import ToolingPage from "./pages/ToolingPage";
 import MaterialsPage from "./pages/MaterialsPage";
+import PartsPage from "./pages/PartsPage";
+import PartDetailPage from "./pages/PartDetailPage";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +35,8 @@ const App = () => (
           <Route path="/app/machines" element={<AuthRequired><MachinesPage /></AuthRequired>} />
           <Route path="/app/tooling" element={<AuthRequired><ToolingPage /></AuthRequired>} />
           <Route path="/app/materials" element={<AuthRequired><MaterialsPage /></AuthRequired>} />
+          <Route path="/app/parts" element={<AuthRequired><PartsPage /></AuthRequired>} />
+          <Route path="/app/parts/:id" element={<AuthRequired><PartDetailPage /></AuthRequired>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

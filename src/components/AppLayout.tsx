@@ -67,6 +67,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             icon={<Package size={16} />}
             isActive={location.pathname === "/app/materials"}
           />
+          <NavLink 
+            to="/app/parts" 
+            label="Parts"
+            icon={<File size={16} />}
+            isActive={location.pathname.startsWith("/app/parts")}
+          />
         </nav>
         
         <div className="mt-auto pt-4">

@@ -9,7 +9,169 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      itineraries: {
+        Row: {
+          created_at: string
+          id: string
+          part_id: string
+          steps: Json
+          total_cost: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          part_id: string
+          steps: Json
+          total_cost: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          part_id?: string
+          steps?: Json
+          total_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itineraries_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      machines: {
+        Row: {
+          axes: number
+          created_at: string
+          id: string
+          name: string
+          spindle_rpm: number
+          type: string
+          x_range: number
+          y_range: number
+          z_range: number
+        }
+        Insert: {
+          axes: number
+          created_at?: string
+          id?: string
+          name: string
+          spindle_rpm: number
+          type: string
+          x_range: number
+          y_range: number
+          z_range: number
+        }
+        Update: {
+          axes?: number
+          created_at?: string
+          id?: string
+          name?: string
+          spindle_rpm?: number
+          type?: string
+          x_range?: number
+          y_range?: number
+          z_range?: number
+        }
+        Relationships: []
+      }
+      materials: {
+        Row: {
+          created_at: string
+          dimensions: Json
+          id: string
+          name: string
+          stock_type: Database["public"]["Enums"]["material_stock_type"]
+          unit_cost: number
+        }
+        Insert: {
+          created_at?: string
+          dimensions: Json
+          id?: string
+          name: string
+          stock_type: Database["public"]["Enums"]["material_stock_type"]
+          unit_cost: number
+        }
+        Update: {
+          created_at?: string
+          dimensions?: Json
+          id?: string
+          name?: string
+          stock_type?: Database["public"]["Enums"]["material_stock_type"]
+          unit_cost?: number
+        }
+        Relationships: []
+      }
+      parts: {
+        Row: {
+          created_at: string
+          file_url: string | null
+          id: string
+          name: string
+          upload_date: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          name: string
+          upload_date?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          name?: string
+          upload_date?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      tooling: {
+        Row: {
+          created_at: string
+          diameter: number
+          id: string
+          length: number
+          life_remaining: number
+          machine_id: string
+          material: string
+          tool_name: string
+        }
+        Insert: {
+          created_at?: string
+          diameter: number
+          id?: string
+          length: number
+          life_remaining: number
+          machine_id: string
+          material: string
+          tool_name: string
+        }
+        Update: {
+          created_at?: string
+          diameter?: number
+          id?: string
+          length?: number
+          life_remaining?: number
+          machine_id?: string
+          material?: string
+          tool_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tooling_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "machines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +180,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      material_stock_type: "bar" | "sheet" | "block"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +295,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      material_stock_type: ["bar", "sheet", "block"],
+    },
   },
 } as const

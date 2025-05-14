@@ -39,7 +39,7 @@ const Index = () => {
               Your intelligent manufacturing assistant that simplifies CNC operations and optimizes production workflows.
             </p>
             
-            <div className="pt-4">
+            <div className="pt-4 flex flex-wrap gap-4">
               {loading ? (
                 <div className="animate-pulse h-10 w-32 bg-gray-200 rounded-md"></div>
               ) : user ? (
@@ -51,7 +51,7 @@ const Index = () => {
                   Go to Dashboard
                 </Button>
               ) : (
-                <div className="flex flex-col sm:flex-row gap-4">
+                <>
                   <Button 
                     onClick={() => navigate('/signup')}
                     size="lg"
@@ -67,7 +67,7 @@ const Index = () => {
                   >
                     Sign In
                   </Button>
-                </div>
+                </>
               )}
             </div>
           </div>

@@ -99,8 +99,7 @@ const PartDetailPage = () => {
     } catch (error) {
       console.error('Error fetching part:', error);
       toast("Error", {
-        description: 'Could not load part details',
-        variant: 'destructive',
+        description: 'Could not load part details'
       });
     } finally {
       setLoading(false);

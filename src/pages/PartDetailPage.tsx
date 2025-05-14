@@ -175,7 +175,7 @@ const PartDetailPage = () => {
     try {
       setGeneratingItinerary(true);
       toast("Generating Itinerary", {
-        description: 'This may take a moment...',
+        description: 'This may take a moment...'
       });
 
       // Call the edge function
@@ -207,7 +207,7 @@ const PartDetailPage = () => {
       }
 
       toast("Success", {
-        description: 'Itinerary generated successfully',
+        description: 'Itinerary generated successfully'
       });
       
       await fetchItinerary();
@@ -215,8 +215,7 @@ const PartDetailPage = () => {
     } catch (error: any) {
       console.error('Error generating itinerary:', error);
       toast("Error", {
-        description: error.message || 'Could not generate itinerary',
-        variant: 'destructive',
+        description: error.message || 'Could not generate itinerary'
       });
     } finally {
       setGeneratingItinerary(false);

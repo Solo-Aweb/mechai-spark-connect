@@ -28,8 +28,7 @@ export const FileUpload = ({
       // Check file size
       if (selectedFile.size > maxSize) {
         toast("File too large", {
-          description: `File size should be less than ${Math.round(maxSize / (1024 * 1024))}MB`,
-          variant: "destructive"
+          description: `File size should be less than ${Math.round(maxSize / (1024 * 1024))}MB`
         });
         return;
       }
@@ -40,8 +39,7 @@ export const FileUpload = ({
       
       if (!fileExtension || !acceptedExtensions.includes(fileExtension)) {
         toast("Invalid file type", {
-          description: `Allowed file types: ${accept}`,
-          variant: "destructive"
+          description: `Allowed file types: ${accept}`
         });
         return;
       }
@@ -53,8 +51,7 @@ export const FileUpload = ({
   const handleUpload = async () => {
     if (!file) {
       toast("No file selected", {
-        description: "Please select a file to upload",
-        variant: "destructive"
+        description: "Please select a file to upload"
       });
       return;
     }
@@ -87,8 +84,7 @@ export const FileUpload = ({
     } catch (error) {
       console.error('Error uploading file:', error);
       toast("Upload failed", {
-        description: "There was a problem uploading your file",
-        variant: "destructive"
+        description: "There was a problem uploading your file"
       });
     } finally {
       setIsUploading(false);

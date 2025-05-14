@@ -50,8 +50,7 @@ const PartsPage = () => {
     } catch (error) {
       console.error('Error fetching parts:', error);
       toast("Error", {
-        description: 'Could not load parts',
-        variant: 'destructive',
+        description: 'Could not load parts'
       });
     } finally {
       setLoading(false);
@@ -62,8 +61,7 @@ const PartsPage = () => {
     e.preventDefault();
     if (!partName) {
       toast("Error", {
-        description: 'Part name is required',
-        variant: 'destructive',
+        description: 'Part name is required'
       });
       return;
     }
@@ -83,7 +81,7 @@ const PartsPage = () => {
       if (error) throw error;
 
       toast("Success", {
-        description: 'Part created successfully',
+        description: 'Part created successfully'
       });
       setPartName('');
       setFileUrl('');
@@ -92,8 +90,7 @@ const PartsPage = () => {
     } catch (error) {
       console.error('Error creating part:', error);
       toast("Error", {
-        description: 'Could not create part',
-        variant: 'destructive',
+        description: 'Could not create part'
       });
     } finally {
       setIsSubmitting(false);

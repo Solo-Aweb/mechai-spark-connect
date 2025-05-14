@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/sonner";
-import { LayoutDashboard, Wrench, Tool, Package } from "lucide-react";
+import { LayoutDashboard, Wrench, File, Package } from "lucide-react";
 
 type NavLinkProps = {
   to: string;
@@ -58,7 +58,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <NavLink 
             to="/app/tooling" 
             label="Tooling"
-            icon={<Tool size={16} />}
+            icon={<File size={16} />}
             isActive={location.pathname === "/app/tooling"}
           />
           <NavLink 

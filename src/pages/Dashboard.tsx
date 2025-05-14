@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import AppLayout from "@/components/AppLayout";
-import { Wrench, Tool, Package } from "lucide-react";
+import { Wrench, File, Package } from "lucide-react";
 
 type CountStats = {
   machines: number;
@@ -95,7 +94,7 @@ export default function Dashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Tooling</CardTitle>
-              <Tool className="h-4 w-4 text-muted-foreground" />
+              <File className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.tools}</div>
@@ -140,7 +139,7 @@ export default function Dashboard() {
             </Link>
             <Link to="/app/tooling">
               <Button className="w-full" variant="outline">
-                <Tool className="mr-2 h-4 w-4" />
+                <File className="mr-2 h-4 w-4" />
                 Manage Tooling
               </Button>
             </Link>

@@ -119,7 +119,20 @@ export default function ToolingPage() {
   // Mutation to add a new tool
   const addToolMutation = useMutation({
     mutationFn: async (newTool: ToolFormValues) => {
-      const { data, error } = await supabase.from("tooling").insert([newTool]).select();
+      // This fixes the type issue by ensuring required fields are present
+      const toolData = {
+        tool_name: newTool.tool_name,
+        diameter: newTool.diameter,
+        length: newTool.length,
+        material: newTool.material,
+        life_remaining: newTool.life_remaining,
+        machine_id: newTool.machine_id
+      };
+      
+      const { data, error } = await supabase
+        .from("tooling")
+        .insert([toolData])
+        .select();
 
       if (error) {
         throw new Error(error.message);

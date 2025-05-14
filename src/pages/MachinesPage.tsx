@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -85,7 +84,21 @@ export default function MachinesPage() {
   // Define the mutation to add a new machine
   const addMachineMutation = useMutation({
     mutationFn: async (newMachine: MachineFormValues) => {
-      const { data, error } = await supabase.from("machines").insert([newMachine]).select();
+      // This fixes the type issue by ensuring required fields are present
+      const machineData = {
+        name: newMachine.name,
+        type: newMachine.type,
+        axes: newMachine.axes,
+        spindle_rpm: newMachine.spindle_rpm,
+        x_range: newMachine.x_range,
+        y_range: newMachine.y_range,
+        z_range: newMachine.z_range
+      };
+      
+      const { data, error } = await supabase
+        .from("machines")
+        .insert([machineData])
+        .select();
 
       if (error) {
         throw new Error(error.message);

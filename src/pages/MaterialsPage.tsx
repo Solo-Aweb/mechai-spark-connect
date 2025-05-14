@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +41,7 @@ import { Plus } from "lucide-react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { Json } from "@/integrations/supabase/types";
 
 // Define the Material type based on the database schema
 type Material = {
@@ -97,8 +97,19 @@ export default function MaterialsPage() {
 
   // Mutation to add a new material
   const addMaterialMutation = useMutation({
-    mutationFn: async (newMaterial: MaterialFormValues) => {
-      const { data, error } = await supabase.from("materials").insert([newMaterial]).select();
+    mutationFn: async (values: MaterialFormValues) => {
+      // This fixes the type issue by ensuring required fields are present
+      const materialData = {
+        name: values.name,
+        stock_type: values.stock_type,
+        unit_cost: values.unit_cost,
+        dimensions: values.dimensions as Json
+      };
+      
+      const { data, error } = await supabase
+        .from("materials")
+        .insert([materialData])
+        .select();
 
       if (error) {
         throw new Error(error.message);

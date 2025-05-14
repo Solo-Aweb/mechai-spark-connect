@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -99,8 +98,7 @@ const PartDetailPage = () => {
       }
     } catch (error) {
       console.error('Error fetching part:', error);
-      toast({
-        title: 'Error',
+      toast("Error", {
         description: 'Could not load part details',
         variant: 'destructive',
       });
@@ -136,8 +134,7 @@ const PartDetailPage = () => {
       setMaterials(materialsData || []);
     } catch (error) {
       console.error('Error fetching inventory:', error);
-      toast({
-        title: 'Warning',
+      toast("Warning", {
         description: 'Could not load some inventory data',
       });
     }
@@ -177,8 +174,7 @@ const PartDetailPage = () => {
     
     try {
       setGeneratingItinerary(true);
-      toast({
-        title: 'Generating Itinerary',
+      toast("Generating Itinerary", {
         description: 'This may take a moment...',
       });
 
@@ -210,8 +206,7 @@ const PartDetailPage = () => {
         throw new Error(result.error || 'Unknown error occurred');
       }
 
-      toast({
-        title: 'Success',
+      toast("Success", {
         description: 'Itinerary generated successfully',
       });
       
@@ -219,8 +214,7 @@ const PartDetailPage = () => {
       setActiveTab('itinerary');
     } catch (error: any) {
       console.error('Error generating itinerary:', error);
-      toast({
-        title: 'Error',
+      toast("Error", {
         description: error.message || 'Could not generate itinerary',
         variant: 'destructive',
       });
@@ -263,10 +257,10 @@ const PartDetailPage = () => {
     <AppLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">{part.name}</h1>
+          <h1 className="text-3xl font-bold">{part?.name}</h1>
           <Button 
             onClick={generateItinerary} 
-            disabled={generatingItinerary || !part.file_url}
+            disabled={generatingItinerary || !part?.file_url}
           >
             {generatingItinerary ? (
               <>
@@ -282,7 +276,7 @@ const PartDetailPage = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="details">Details</TabsTrigger>
-            <TabsTrigger value="preview" disabled={!part.file_url}>3D Preview</TabsTrigger>
+            <TabsTrigger value="preview" disabled={!part?.file_url}>3D Preview</TabsTrigger>
             <TabsTrigger value="inventory">Inventory</TabsTrigger>
             <TabsTrigger value="itinerary" disabled={!itinerary}>Itinerary</TabsTrigger>
           </TabsList>
@@ -296,20 +290,20 @@ const PartDetailPage = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm font-medium">Name</p>
-                    <p className="text-lg">{part.name}</p>
+                    <p className="text-lg">{part?.name}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium">Upload Date</p>
                     <p className="text-lg">
-                      {new Date(part.upload_date).toLocaleDateString()}
+                      {new Date(part?.upload_date).toLocaleDateString()}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm font-medium">File</p>
                     <p className="text-lg">
-                      {part.file_url ? (
+                      {part?.file_url ? (
                         <a 
-                          href={part.file_url} 
+                          href={part?.file_url} 
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="text-blue-500 hover:underline"
@@ -327,7 +321,7 @@ const PartDetailPage = () => {
           </TabsContent>
           
           <TabsContent value="preview">
-            {part.file_url ? (
+            {part?.file_url ? (
               <Card>
                 <CardHeader>
                   <CardTitle>3D Model Preview</CardTitle>

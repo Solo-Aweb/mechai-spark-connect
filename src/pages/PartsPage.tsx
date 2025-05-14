@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,7 +10,6 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/components/ui/sonner';
 import { File, Plus, Loader2, Box } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import { FileUpload } from '@/components/FileUpload';
 import { ModelViewer } from '@/components/ModelViewer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -34,7 +32,6 @@ const PartsPage = () => {
   const [previewFileType, setPreviewFileType] = useState('');
   const [activeTab, setActiveTab] = useState('details');
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   useEffect(() => {
     fetchParts();
@@ -52,8 +49,7 @@ const PartsPage = () => {
       setParts(data || []);
     } catch (error) {
       console.error('Error fetching parts:', error);
-      toast({
-        title: 'Error',
+      toast("Error", {
         description: 'Could not load parts',
         variant: 'destructive',
       });
@@ -65,8 +61,7 @@ const PartsPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!partName) {
-      toast({
-        title: 'Error',
+      toast("Error", {
         description: 'Part name is required',
         variant: 'destructive',
       });
@@ -87,8 +82,7 @@ const PartsPage = () => {
 
       if (error) throw error;
 
-      toast({
-        title: 'Success',
+      toast("Success", {
         description: 'Part created successfully',
       });
       setPartName('');
@@ -97,8 +91,7 @@ const PartsPage = () => {
       await fetchParts();
     } catch (error) {
       console.error('Error creating part:', error);
-      toast({
-        title: 'Error',
+      toast("Error", {
         description: 'Could not create part',
         variant: 'destructive',
       });
@@ -116,8 +109,7 @@ const PartsPage = () => {
     setPreviewFileType(fileExtension);
     setActiveTab('preview');
     
-    toast({
-      title: 'File uploaded',
+    toast("File uploaded", {
       description: 'You can now preview the model',
     });
   };

@@ -56,6 +56,23 @@ serve(async (req) => {
       });
     }
 
+    // Fetch SVG content if available
+    let svgContent = null;
+    if (part.svg_url) {
+      console.log('SVG URL found, fetching SVG content:', part.svg_url);
+      try {
+        const svgResponse = await fetch(part.svg_url);
+        if (svgResponse.ok) {
+          svgContent = await svgResponse.text();
+          console.log('SVG content fetched successfully');
+        } else {
+          console.error('Failed to fetch SVG content:', svgResponse.statusText);
+        }
+      } catch (error) {
+        console.error('Error fetching SVG content:', error);
+      }
+    }
+
     // Fetch all machines
     const { data: machines, error: machinesError } = await supabase
       .from('machines')
@@ -95,8 +112,13 @@ serve(async (req) => {
       });
     }
 
-    // Prepare prompt for OpenAI
-    const prompt = `Given these machines ${JSON.stringify(machines)}, tooling ${JSON.stringify(tooling)}, and material ${JSON.stringify(materials)}, plan a sequence of machining steps for part with URL ${part.file_url || 'No file URL available'}. Return JSON with ordered steps, each step's assigned machine_id, tooling_id, estimated time (in minutes), and cost. Flag any unservable operations.`;
+    // Prepare prompt for OpenAI based on available data
+    let prompt;
+    if (svgContent) {
+      prompt = `Given these 2D vectors ${JSON.stringify(svgContent)}, shop machines ${JSON.stringify(machines)}, tooling ${JSON.stringify(tooling)}, and materials ${JSON.stringify(materials)}, identify machining features (pockets, holes, slots), then plan ordered machining steps. Return JSON with steps, machine_id, tooling_id, time, cost, and flag unservable features.`;
+    } else {
+      prompt = `Given these machines ${JSON.stringify(machines)}, tooling ${JSON.stringify(tooling)}, and material ${JSON.stringify(materials)}, plan a sequence of machining steps for part with URL ${part.file_url || 'No file URL available'}. Return JSON with ordered steps, each step's assigned machine_id, tooling_id, estimated time (in minutes), and cost. Flag any unservable operations.`;
+    }
 
     // Call OpenAI API
     const response = await fetch('https://api.openai.com/v1/chat/completions', {

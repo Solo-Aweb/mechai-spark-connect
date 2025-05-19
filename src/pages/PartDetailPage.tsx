@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,7 +5,7 @@ import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/components/ui/sonner';
-import { ArrowLeft, Loader2, Download, Trash2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Download, Trash2, FileCog } from 'lucide-react';
 import { ModelViewer } from '@/components/ModelViewer';
 import { SvgPreview } from '@/components/SvgPreview';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -19,15 +18,29 @@ interface Part {
   upload_date: string;
 }
 
+interface Itinerary {
+  id: string;
+  part_id: string;
+  steps: any;
+  total_cost: number;
+  created_at: string;
+}
+
 const PartDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [part, setPart] = useState<Part | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [generatingItinerary, setGeneratingItinerary] = useState(false);
+  const [itinerary, setItinerary] = useState<Itinerary | null>(null);
+  const [loadingItinerary, setLoadingItinerary] = useState(false);
 
   useEffect(() => {
-    fetchPartDetails();
+    if (id) {
+      fetchPartDetails();
+      fetchLatestItinerary();
+    }
   }, [id]);
 
   const fetchPartDetails = async () => {
@@ -51,6 +64,34 @@ const PartDetailPage = () => {
       navigate('/app/parts');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchLatestItinerary = async () => {
+    if (!id) return;
+    
+    try {
+      setLoadingItinerary(true);
+      const { data, error } = await supabase
+        .from('itineraries')
+        .select('*')
+        .eq('part_id', id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error) {
+        if (error.code !== 'PGRST116') { // No rows returned
+          console.error('Error fetching itinerary:', error);
+        }
+        setItinerary(null);
+      } else {
+        setItinerary(data);
+      }
+    } catch (error) {
+      console.error('Error fetching itinerary:', error);
+    } finally {
+      setLoadingItinerary(false);
     }
   };
 
@@ -139,6 +180,59 @@ const PartDetailPage = () => {
     return pathMatch ? pathMatch[1] : 'file';
   };
 
+  const generateItinerary = async () => {
+    if (!part || !part.id) {
+      toast("Error", {
+        description: 'Part information is missing'
+      });
+      return;
+    }
+    
+    try {
+      setGeneratingItinerary(true);
+      const { data: tokenData } = await supabase.auth.getSession();
+      const token = tokenData?.session?.access_token;
+      
+      if (!token) {
+        throw new Error('Authentication token is missing');
+      }
+      
+      const response = await fetch(
+        'https://dhppkyaaedwpalnrwvmd.supabase.co/functions/v1/generate-itinerary',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ partId: part.id }),
+        }
+      );
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate itinerary');
+      }
+      
+      const result = await response.json();
+      
+      toast("Success", {
+        description: 'Itinerary generated successfully'
+      });
+      
+      // Refresh the itinerary data
+      fetchLatestItinerary();
+      
+    } catch (error) {
+      console.error('Error generating itinerary:', error);
+      toast("Error", {
+        description: error instanceof Error ? error.message : 'Failed to generate itinerary'
+      });
+    } finally {
+      setGeneratingItinerary(false);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -195,6 +289,25 @@ const PartDetailPage = () => {
                     <div className="font-medium">Upload Date:</div>
                     <div className="col-span-2">{formatDate(part.upload_date)}</div>
                   </div>
+                  <div className="mt-4">
+                    <Button 
+                      onClick={generateItinerary} 
+                      disabled={generatingItinerary}
+                      className="w-full"
+                    >
+                      {generatingItinerary ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating Itinerary...
+                        </>
+                      ) : (
+                        <>
+                          <FileCog className="mr-2 h-4 w-4" />
+                          Generate Machining Itinerary
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
               <CardFooter className="flex justify-end gap-2">
@@ -222,13 +335,13 @@ const PartDetailPage = () => {
                 <CardTitle>Preview</CardTitle>
               </CardHeader>
               <CardContent className="px-2 pb-2">
-                {part.file_url && is3DModel(part.file_url) ? (
+                {part.svg_url ? (
+                  <SvgPreview url={part.svg_url} altText={`${part.name} preview`} />
+                ) : part.file_url && is3DModel(part.file_url) ? (
                   <ModelViewer 
                     url={part.file_url} 
                     fileType={part.file_url.split('.').pop()?.toLowerCase() || ''}
                   />
-                ) : part.svg_url ? (
-                  <SvgPreview url={part.svg_url} altText={`${part.name} preview`} />
                 ) : (
                   <div className="flex items-center justify-center p-10 bg-gray-50 rounded-md">
                     <p className="text-gray-400">No preview available</p>
@@ -236,6 +349,69 @@ const PartDetailPage = () => {
                 )}
               </CardContent>
             </Card>
+
+            {loadingItinerary ? (
+              <Card className="md:col-span-2">
+                <CardContent className="flex justify-center py-10">
+                  <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                </CardContent>
+              </Card>
+            ) : itinerary ? (
+              <Card className="md:col-span-2">
+                <CardHeader>
+                  <CardTitle>Machining Itinerary</CardTitle>
+                  <CardDescription>
+                    Generated on {formatDate(itinerary.created_at)} • 
+                    Total Cost: ${itinerary.total_cost.toFixed(2)}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="border rounded-md overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Step</th>
+                          <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Operation</th>
+                          <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Machine</th>
+                          <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Tool</th>
+                          <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Time (min)</th>
+                          <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Cost ($)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {itinerary.steps && Array.isArray(itinerary.steps) ? 
+                          itinerary.steps.map((step: any, index: number) => (
+                            <tr key={index} className={step.unservable ? "bg-red-50" : ""}>
+                              <td className="px-4 py-3 text-sm">{index + 1}</td>
+                              <td className="px-4 py-3 text-sm">{step.description || step.operation || 'N/A'}</td>
+                              <td className="px-4 py-3 text-sm">{step.machine_id || 'N/A'}</td>
+                              <td className="px-4 py-3 text-sm">{step.tooling_id || 'N/A'}</td>
+                              <td className="px-4 py-3 text-sm">{step.time || 'N/A'}</td>
+                              <td className="px-4 py-3 text-sm">{step.cost ? `$${step.cost.toFixed(2)}` : 'N/A'}</td>
+                            </tr>
+                          )) : (
+                            <tr>
+                              <td colSpan={6} className="px-4 py-3 text-sm text-center text-gray-500">
+                                No steps available
+                              </td>
+                            </tr>
+                          )
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  {itinerary.steps && Array.isArray(itinerary.steps) && 
+                    itinerary.steps.some((step: any) => step.unservable) && (
+                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                      <p className="text-sm text-red-600">
+                        Some operations cannot be serviced with the available machines and tooling.
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ) : null}
           </div>
         ) : (
           <Card>

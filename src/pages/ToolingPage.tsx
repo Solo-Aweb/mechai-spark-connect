@@ -78,41 +78,59 @@ export default function ToolingPage() {
   const [selectedMachineId, setSelectedMachineId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  // Query to fetch tools
+  // Query to fetch tools - Fixed error handling
   const { data: tools, isLoading: isLoadingTools } = useQuery({
     queryKey: ["tools", selectedMachineId],
     queryFn: async () => {
-      let query = supabase
-        .from("tooling")
-        .select("*, machines(name)")
-        .order("created_at", { ascending: false });
-
-      if (selectedMachineId) {
-        query = query.eq("machine_id", selectedMachineId);
+      try {
+        let query = supabase
+          .from("tooling")
+          .select("*, machines(name)")
+          .order("created_at", { ascending: false });
+  
+        if (selectedMachineId) {
+          query = query.eq("machine_id", selectedMachineId);
+        }
+  
+        const { data, error } = await query;
+  
+        if (error) {
+          console.error("Error fetching tools:", error);
+          toast.error("Failed to fetch tools");
+          return [];
+        }
+        
+        return data as (Tool & { machines: { name: string } })[];
+      } catch (error) {
+        console.error("Unexpected error fetching tools:", error);
+        toast.error("An unexpected error occurred");
+        return [];
       }
-
-      const { data, error } = await query;
-
-      if (error) {
-        throw new Error(error.message);
-      }
-      return data as (Tool & { machines: { name: string } })[];
     },
   });
 
-  // Query to fetch machines for the dropdown
+  // Query to fetch machines for the dropdown - Fixed error handling
   const { data: machines, isLoading: isLoadingMachines } = useQuery({
     queryKey: ["machines-dropdown"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("machines")
-        .select("id, name")
-        .order("name");
-
-      if (error) {
-        throw new Error(error.message);
+      try {
+        const { data, error } = await supabase
+          .from("machines")
+          .select("id, name")
+          .order("name");
+  
+        if (error) {
+          console.error("Error fetching machines:", error);
+          toast.error("Failed to fetch machines");
+          return [];
+        }
+        
+        return data as Machine[];
+      } catch (error) {
+        console.error("Unexpected error fetching machines:", error);
+        toast.error("An unexpected error occurred");
+        return [];
       }
-      return data as Machine[];
     },
   });
 

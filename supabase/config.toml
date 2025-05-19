@@ -3,3 +3,6 @@ project_id = "dhppkyaaedwpalnrwvmd"
 
 [functions.generate-itinerary]
 verify_jwt = true
+
+[functions.pdfToSvg]
+verify_jwt = true

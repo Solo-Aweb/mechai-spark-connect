@@ -110,6 +110,7 @@ export type Database = {
           file_url: string | null
           id: string
           name: string
+          svg_url: string | null
           upload_date: string
           user_id: string | null
         }
@@ -118,6 +119,7 @@ export type Database = {
           file_url?: string | null
           id?: string
           name: string
+          svg_url?: string | null
           upload_date?: string
           user_id?: string | null
         }
@@ -126,6 +128,7 @@ export type Database = {
           file_url?: string | null
           id?: string
           name?: string
+          svg_url?: string | null
           upload_date?: string
           user_id?: string | null
         }

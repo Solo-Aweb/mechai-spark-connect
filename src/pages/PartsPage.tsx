@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,15 +10,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/components/ui/sonner';
-import { File, Plus, Loader2, Box } from 'lucide-react';
+import { File, Plus, Loader2, Box, FileUp, Image } from 'lucide-react';
 import { FileUpload } from '@/components/FileUpload';
 import { ModelViewer } from '@/components/ModelViewer';
+import { SvgPreview } from '@/components/SvgPreview';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface Part {
   id: string;
   name: string;
   file_url: string | null;
+  svg_url: string | null;
   upload_date: string;
 }
 
@@ -26,6 +29,7 @@ const PartsPage = () => {
   const [loading, setLoading] = useState(true);
   const [partName, setPartName] = useState('');
   const [fileUrl, setFileUrl] = useState('');
+  const [svgUrl, setSvgUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [previewFileUrl, setPreviewFileUrl] = useState('');
@@ -74,6 +78,7 @@ const PartsPage = () => {
           {
             name: partName,
             file_url: fileUrl || null,
+            svg_url: svgUrl || null,
           },
         ])
         .select();
@@ -85,6 +90,7 @@ const PartsPage = () => {
       });
       setPartName('');
       setFileUrl('');
+      setSvgUrl(null);
       setIsDialogOpen(false);
       await fetchParts();
     } catch (error) {
@@ -97,17 +103,25 @@ const PartsPage = () => {
     }
   };
 
-  const handleFileUploadComplete = (url: string, fileName: string) => {
+  const handleFileUploadComplete = (url: string, fileName: string, svgFileUrl?: string) => {
     setFileUrl(url);
+    setSvgUrl(svgFileUrl || null);
     
     // Extract file extension
     const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
-    setPreviewFileUrl(url);
+    setPreviewFileUrl(fileExtension === 'svg' || svgFileUrl ? (svgFileUrl || url) : url);
     setPreviewFileType(fileExtension);
     setActiveTab('preview');
     
+    // Auto-populate part name from file name
+    if (!partName) {
+      setPartName(fileName.replace(`.${fileExtension}`, ''));
+    }
+    
     toast("File uploaded", {
-      description: 'You can now preview the model',
+      description: fileExtension === 'pdf' ? 
+        'PDF processed and converted to SVG for preview' : 
+        'You can now preview the file',
     });
   };
 
@@ -121,6 +135,31 @@ const PartsPage = () => {
 
   const viewPartDetails = (partId: string) => {
     navigate(`/app/parts/${partId}`);
+  };
+
+  // Determine file type icon based on URL or extension
+  const getFileTypeIcon = (part: Part) => {
+    if (part.svg_url) {
+      return <Image className="mr-1 h-4 w-4 text-blue-500" />;
+    } else if (part.file_url) {
+      const fileExt = part.file_url.split('.').pop()?.toLowerCase();
+      if (['stl', 'step'].includes(fileExt || '')) {
+        return <FileUp className="mr-1 h-4 w-4 text-blue-500" />;
+      }
+    }
+    return <File className="mr-1 h-4 w-4 text-gray-500" />;
+  };
+
+  const getFileTypeLabel = (part: Part) => {
+    if (part.svg_url) {
+      return "2D Drawing";
+    } else if (part.file_url) {
+      const fileExt = part.file_url.split('.').pop()?.toLowerCase();
+      if (['stl', 'step'].includes(fileExt || '')) {
+        return "3D Model";
+      }
+    }
+    return "No file";
   };
 
   return (
@@ -139,7 +178,7 @@ const PartsPage = () => {
                 <DialogHeader>
                   <DialogTitle>Add New Part</DialogTitle>
                   <DialogDescription>
-                    Create a new part by providing a name and uploading a model file.
+                    Create a new part by providing a name and uploading a model file or drawing.
                   </DialogDescription>
                   <TabsList className="grid grid-cols-2 mt-4">
                     <TabsTrigger value="details">Details</TabsTrigger>
@@ -165,7 +204,7 @@ const PartsPage = () => {
                       <div className="col-span-4">
                         <FileUpload 
                           onUploadComplete={handleFileUploadComplete}
-                          accept=".stl,.step,.dxf"
+                          accept=".stl,.step,.dxf,.pdf,.svg"
                         />
                       </div>
                     </div>
@@ -175,7 +214,11 @@ const PartsPage = () => {
                 <TabsContent value="preview" className="py-4">
                   {previewFileUrl && (
                     <div className="space-y-4">
-                      <ModelViewer url={previewFileUrl} fileType={previewFileType} />
+                      {['stl', 'step'].includes(previewFileType) ? (
+                        <ModelViewer url={previewFileUrl} fileType={previewFileType} />
+                      ) : (
+                        <SvgPreview url={previewFileUrl} altText="Drawing preview" />
+                      )}
                     </div>
                   )}
                 </TabsContent>
@@ -219,7 +262,7 @@ const PartsPage = () => {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Upload Date</TableHead>
-                    <TableHead>File</TableHead>
+                    <TableHead>File Type</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -230,14 +273,12 @@ const PartsPage = () => {
                         <TableCell className="font-medium">{part.name}</TableCell>
                         <TableCell>{formatDate(part.upload_date)}</TableCell>
                         <TableCell>
-                          {part.file_url ? (
-                            <div className="flex items-center">
-                              <Box className="mr-1 h-4 w-4 text-blue-500" />
-                              <span className="text-blue-500">3D Model</span>
-                            </div>
-                          ) : (
-                            <span className="text-gray-500">No file</span>
-                          )}
+                          <div className="flex items-center">
+                            {getFileTypeIcon(part)}
+                            <span className={part.file_url || part.svg_url ? "text-blue-500" : "text-gray-500"}>
+                              {getFileTypeLabel(part)}
+                            </span>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Button
@@ -253,7 +294,7 @@ const PartsPage = () => {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center py-10">
-                        No parts found. Add your first part to get started.
+                        <p>No parts found. Add your first part to get started.</p>
                       </TableCell>
                     </TableRow>
                   )}

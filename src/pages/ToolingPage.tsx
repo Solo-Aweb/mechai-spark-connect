@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus } from "lucide-react";
+import { Plus, AlertCircle } from "lucide-react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -76,13 +76,15 @@ type Machine = {
 export default function ToolingPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedMachineId, setSelectedMachineId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  // Query to fetch tools - Fixed error handling
-  const { data: tools, isLoading: isLoadingTools } = useQuery({
+  // Query to fetch tools - Enhanced error handling
+  const { data: tools, isLoading: isLoadingTools, isError: isToolsError } = useQuery({
     queryKey: ["tools", selectedMachineId],
     queryFn: async () => {
       try {
+        console.log("Fetching tools with machineId:", selectedMachineId);
         let query = supabase
           .from("tooling")
           .select("*, machines(name)")
@@ -97,23 +99,33 @@ export default function ToolingPage() {
         if (error) {
           console.error("Error fetching tools:", error);
           toast.error("Failed to fetch tools");
+          setError("Failed to load tools. Please try again later.");
           return [];
         }
         
+        console.log("Tools data fetched:", data);
         return data as (Tool & { machines: { name: string } })[];
       } catch (error) {
         console.error("Unexpected error fetching tools:", error);
         toast.error("An unexpected error occurred");
+        setError("An unexpected error occurred while loading tools.");
         return [];
       }
     },
+    retry: 1,
+    refetchOnWindowFocus: false,
   });
 
-  // Query to fetch machines for the dropdown - Fixed error handling
-  const { data: machines, isLoading: isLoadingMachines } = useQuery({
+  // Query to fetch machines for the dropdown - Enhanced error handling
+  const { 
+    data: machines, 
+    isLoading: isLoadingMachines,
+    isError: isMachinesError 
+  } = useQuery({
     queryKey: ["machines-dropdown"],
     queryFn: async () => {
       try {
+        console.log("Fetching machines for dropdown");
         const { data, error } = await supabase
           .from("machines")
           .select("id, name")
@@ -125,6 +137,7 @@ export default function ToolingPage() {
           return [];
         }
         
+        console.log("Machines data fetched:", data);
         return data as Machine[];
       } catch (error) {
         console.error("Unexpected error fetching machines:", error);
@@ -132,37 +145,50 @@ export default function ToolingPage() {
         return [];
       }
     },
+    retry: 1,
+    refetchOnWindowFocus: false,
   });
 
-  // Mutation to add a new tool
+  // Mutation to add a new tool - Enhanced error handling
   const addToolMutation = useMutation({
     mutationFn: async (values: ToolFormValues) => {
-      // Fix: Ensure all required fields are explicitly set
-      const toolData = {
-        tool_name: values.tool_name,
-        machine_id: values.machine_id,
-        material: values.material,
-        diameter: values.diameter,
-        length: values.length,
-        life_remaining: values.life_remaining,
-      };
-      
-      const { data, error } = await supabase
-        .from("tooling")
-        .insert([toolData])
-        .select();
+      try {
+        console.log("Adding new tool with values:", values);
+        // Ensure all required fields are explicitly set
+        const toolData = {
+          tool_name: values.tool_name,
+          machine_id: values.machine_id,
+          material: values.material,
+          diameter: values.diameter,
+          length: values.length,
+          life_remaining: values.life_remaining,
+        };
+        
+        const { data, error } = await supabase
+          .from("tooling")
+          .insert([toolData])
+          .select();
 
-      if (error) {
-        throw new Error(error.message);
+        if (error) {
+          console.error("Error adding tool:", error);
+          throw new Error(error.message);
+        }
+        
+        console.log("Tool added successfully:", data);
+        return data;
+      } catch (error) {
+        console.error("Mutation error:", error);
+        throw error;
       }
-      return data;
     },
     onSuccess: () => {
       toast.success("Tool added successfully");
       setIsDialogOpen(false);
+      form.reset();
       queryClient.invalidateQueries({ queryKey: ["tools"] });
     },
     onError: (error: Error) => {
+      console.error("Mutation onError handler:", error);
       toast.error(`Error adding tool: ${error.message}`);
     },
   });
@@ -181,8 +207,17 @@ export default function ToolingPage() {
   });
 
   const onSubmit = (values: ToolFormValues) => {
+    console.log("Form submitted with values:", values);
     addToolMutation.mutate(values);
   };
+
+  // Log initial render
+  useEffect(() => {
+    console.log("ToolingPage mounted");
+    return () => {
+      console.log("ToolingPage unmounted");
+    };
+  }, []);
 
   return (
     <AppLayout>
@@ -192,6 +227,7 @@ export default function ToolingPage() {
           <Select
             value={selectedMachineId || ""}
             onValueChange={(value) => setSelectedMachineId(value || null)}
+            disabled={isLoadingMachines || !machines || machines.length === 0}
           >
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Filter by machine" />
@@ -329,6 +365,16 @@ export default function ToolingPage() {
         </div>
       </div>
 
+      {/* Error display section */}
+      {(isToolsError || isMachinesError || error) && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-4 mb-6 rounded-md flex items-center gap-3">
+          <AlertCircle size={20} />
+          <p>
+            {error || "There was an error loading data. Please try refreshing the page."}
+          </p>
+        </div>
+      )}
+
       {isLoadingTools ? (
         <div className="flex justify-center py-8">
           <div className="animate-pulse">Loading tools...</div>
@@ -351,7 +397,7 @@ export default function ToolingPage() {
               tools.map((tool) => (
                 <TableRow key={tool.id}>
                   <TableCell className="font-medium">{tool.tool_name}</TableCell>
-                  <TableCell>{tool.machines?.name}</TableCell>
+                  <TableCell>{tool.machines?.name || "Unknown Machine"}</TableCell>
                   <TableCell>{tool.material}</TableCell>
                   <TableCell>{tool.diameter}</TableCell>
                   <TableCell>{tool.length}</TableCell>

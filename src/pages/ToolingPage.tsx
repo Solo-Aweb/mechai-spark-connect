@@ -225,15 +225,15 @@ export default function ToolingPage() {
         <h1 className="text-2xl font-bold">Tools</h1>
         <div className="flex gap-4">
           <Select
-            value={selectedMachineId || ""}
-            onValueChange={(value) => setSelectedMachineId(value || null)}
+            value={selectedMachineId || "all"}
+            onValueChange={(value) => setSelectedMachineId(value === "all" ? null : value)}
             disabled={isLoadingMachines || !machines || machines.length === 0}
           >
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Filter by machine" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Machines</SelectItem>
+              <SelectItem value="all">All Machines</SelectItem>
               {machines?.map((machine) => (
                 <SelectItem key={machine.id} value={machine.id}>
                   {machine.name}

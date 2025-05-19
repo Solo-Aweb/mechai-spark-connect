@@ -4,7 +4,12 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.0';
 
 const supabaseUrl = 'https://dhppkyaaedwpalnrwvmd.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRocHBreWFhZWR3cGFsbnJ3dm1kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcyMTUxMTcsImV4cCI6MjA2Mjc5MTExN30.A2tGRdpiLQT4o2LhraQr1lS22-e56SU552HJ_QmMgIg';
-const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+const openaiApiKey = Deno.env.get('OPENAI_API_KEY') || '';
+
+// Add check for API key
+if (!openaiApiKey) {
+  console.error("OPENAI_API_KEY is missing. Please set this in your Supabase Function Secrets.");
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,6 +23,16 @@ serve(async (req) => {
   }
 
   try {
+    // Check if OpenAI API key is configured
+    if (!openaiApiKey) {
+      return new Response(JSON.stringify({ 
+        error: 'OpenAI API key is not configured. Please set OPENAI_API_KEY in the Supabase Function Secrets.' 
+      }), { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     // Get the auth token from the request
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -142,6 +157,18 @@ serve(async (req) => {
         temperature: 0.2
       })
     });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('OpenAI API error:', errorData);
+      return new Response(JSON.stringify({ 
+        error: 'Error calling OpenAI API',
+        details: errorData
+      }), { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
 
     const openaiData = await response.json();
     console.log('OpenAI response:', JSON.stringify(openaiData));

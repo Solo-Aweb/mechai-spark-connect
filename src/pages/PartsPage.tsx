@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -72,6 +71,13 @@ const PartsPage = () => {
 
     setIsSubmitting(true);
     try {
+      // Get the authenticated user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+      
       const { data, error } = await supabase
         .from('parts')
         .insert([
@@ -79,6 +85,7 @@ const PartsPage = () => {
             name: partName,
             file_url: fileUrl || null,
             svg_url: svgUrl || null,
+            user_id: user.id, // Add the user ID to associate with the part
           },
         ])
         .select();
@@ -93,10 +100,10 @@ const PartsPage = () => {
       setSvgUrl(null);
       setIsDialogOpen(false);
       await fetchParts();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating part:', error);
       toast("Error", {
-        description: 'Could not create part'
+        description: `Could not create part: ${error.message || 'Unknown error'}`
       });
     } finally {
       setIsSubmitting(false);

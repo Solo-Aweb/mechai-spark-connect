@@ -18,24 +18,24 @@ export const SvgViewer = ({ url }: SvgViewerProps) => {
     setError(null);
 
     try {
-      // For direct SVG, we'll create an iframe to display it
-      const iframe = document.createElement('iframe');
-      iframe.src = url;
-      iframe.style.width = '100%';
-      iframe.style.height = '100%';
-      iframe.style.border = 'none';
+      // Create an object element instead of an iframe to display the SVG
+      const object = document.createElement('object');
+      object.data = url;
+      object.type = 'image/svg+xml';
+      object.style.width = '100%';
+      object.style.height = '100%';
       
-      iframe.onload = () => setIsLoading(false);
-      iframe.onerror = () => {
+      object.onload = () => setIsLoading(false);
+      object.onerror = () => {
         setError('Failed to load SVG file');
         setIsLoading(false);
       };
       
-      // Clear container and append iframe
+      // Clear container and append object
       while (containerRef.current.firstChild) {
         containerRef.current.removeChild(containerRef.current.firstChild);
       }
-      containerRef.current.appendChild(iframe);
+      containerRef.current.appendChild(object);
       
     } catch (error) {
       console.error('Error displaying SVG:', error);

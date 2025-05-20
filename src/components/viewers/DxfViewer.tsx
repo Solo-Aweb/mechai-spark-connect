@@ -20,8 +20,13 @@ export const DxfViewer = ({ url }: DxfViewerProps) => {
 
     const loadDxf = async () => {
       try {
-        // Fetch the DXF file
-        const response = await fetch(url);
+        // Use fetch with a specific header to prevent download behavior
+        const response = await fetch(url, {
+          headers: {
+            'Content-Type': 'application/octet-stream',
+          },
+        });
+        
         if (!response.ok) {
           throw new Error(`Failed to fetch DXF file: ${response.statusText}`);
         }

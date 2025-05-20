@@ -130,9 +130,9 @@ serve(async (req) => {
     // Prepare prompt for OpenAI based on available data
     let prompt;
     if (svgContent) {
-      prompt = `Given these 2D vectors ${JSON.stringify(svgContent)}, shop machines ${JSON.stringify(machines)}, tooling ${JSON.stringify(tooling)}, and materials ${JSON.stringify(materials)}, identify machining features (pockets, holes, slots), then plan ordered machining steps. Return JSON with steps, machine_id, tooling_id, time, cost, and flag unservable features.`;
+      prompt = `Given these 2D vectors ${JSON.stringify(svgContent)}, shop machines ${JSON.stringify(machines)}, tooling ${JSON.stringify(tooling)}, and materials ${JSON.stringify(materials)}, identify machining features (pockets, holes, slots), then plan ordered machining steps. Return JSON with steps array containing objects with description, machine_id, tooling_id, time, cost, and flag unservable features.`;
     } else {
-      prompt = `Given these machines ${JSON.stringify(machines)}, tooling ${JSON.stringify(tooling)}, and material ${JSON.stringify(materials)}, plan a sequence of machining steps for part with URL ${part.file_url || 'No file URL available'}. Return JSON with ordered steps, each step's assigned machine_id, tooling_id, estimated time (in minutes), and cost. Flag any unservable operations.`;
+      prompt = `Given these machines ${JSON.stringify(machines)}, tooling ${JSON.stringify(tooling)}, and material ${JSON.stringify(materials)}, plan a sequence of machining steps for part with URL ${part.file_url || 'No file URL available'}. Return JSON with steps array containing objects with description, machine_id, tooling_id, time (in minutes), and cost. Flag any unservable operations.`;
     }
 
     // Call OpenAI API
@@ -147,14 +147,13 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are a CNC machining expert tasked with planning machining operations. Return ONLY valid JSON without any explanations or markdown formatting.'
+            content: 'You are a CNC machining expert tasked with planning machining operations. Return ONLY valid JSON with a "steps" array of objects, where each object has: "description", "machine_id", "tooling_id", "time", and "cost" properties. Do NOT include markdown formatting or explanations.'
           },
           {
             role: 'user',
             content: prompt
           }
         ]
-        // Removed the temperature parameter as it's not supported by this model
       })
     });
 
@@ -204,14 +203,58 @@ serve(async (req) => {
           throw new Error('Could not extract valid JSON from the AI response');
         }
       }
-      
-      // Ensure itinerary has a steps array
-      if (!itinerary || !itinerary.steps || !Array.isArray(itinerary.steps)) {
+
+      // Handle different response formats and normalize to expected structure
+      if (itinerary.machining_steps && Array.isArray(itinerary.machining_steps)) {
+        // Convert machining_steps to the expected steps format
+        itinerary = {
+          steps: itinerary.machining_steps.map(step => ({
+            description: step.operation || step.feature || "Machining step",
+            machine_id: step.machine_id,
+            tooling_id: step.tooling_id,
+            time: step.estimated_time || step.time,
+            cost: step.cost,
+            unservable: step.status === "unservable"
+          })),
+          total_cost: itinerary.machining_steps.reduce((sum, step) => sum + (step.cost || 0), 0)
+        };
+      } else if (!itinerary.steps) {
+        // If there's no steps array but we have other data, try to adapt it
+        if (Array.isArray(itinerary)) {
+          // If the entire response is an array, treat it as steps
+          itinerary = {
+            steps: itinerary,
+            total_cost: itinerary.reduce((sum, step) => sum + (step.cost || 0), 0)
+          };
+        } else {
+          // Create a default structure with empty steps
+          itinerary = {
+            steps: [],
+            total_cost: 0
+          };
+        }
+      }
+
+      // Final check to ensure we have a valid steps array
+      if (!itinerary.steps || !Array.isArray(itinerary.steps)) {
         itinerary = {
           steps: [],
           total_cost: 0
         };
       }
+
+      // Validate each step has required fields
+      itinerary.steps = itinerary.steps.map(step => ({
+        description: step.description || step.operation || "Unknown operation",
+        machine_id: step.machine_id || null,
+        tooling_id: step.tooling_id || null,
+        time: step.time || 0,
+        cost: step.cost || 0,
+        unservable: step.unservable || false
+      }));
+
+      // Recalculate total cost
+      itinerary.total_cost = itinerary.steps.reduce((sum, step) => sum + (step.cost || 0), 0);
 
     } catch (e) {
       console.error('Error parsing AI response:', e);
@@ -224,19 +267,13 @@ serve(async (req) => {
       });
     }
 
-    // Calculate total cost
-    let totalCost = 0;
-    if (itinerary.steps) {
-      totalCost = itinerary.steps.reduce((sum, step) => sum + (step.cost || 0), 0);
-    }
-
     // Save the itinerary to Supabase
     const { data: itineraryData, error: itineraryError } = await supabase
       .from('itineraries')
       .insert({
         part_id: partId,
         steps: itinerary,
-        total_cost: totalCost
+        total_cost: itinerary.total_cost
       })
       .select()
       .single();

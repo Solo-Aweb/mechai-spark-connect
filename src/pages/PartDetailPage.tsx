@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +12,7 @@ import { ItineraryCard } from '@/components/part-detail/ItineraryCard';
 import { DeletePartDialog } from '@/components/part-detail/DeletePartDialog';
 import { Part } from '@/types/part';
 import { Itinerary, ItineraryFromSupabase, ItinerarySteps } from '@/types/itinerary';
+import { is3DModel } from '@/utils/formatters';
 
 const PartDetailPage = () => {
   const { id } = useParams();
@@ -254,13 +254,7 @@ const PartDetailPage = () => {
     document.body.removeChild(link);
   };
 
-  // Determine if the file is a 3D model based on file extension
-  const is3DModel = (url: string | null) => {
-    if (!url) return false;
-    const ext = url.split('.').pop()?.toLowerCase() || '';
-    return ['stl', 'step'].includes(ext);
-  };
-
+  // Extract fileName from URL
   const extractFileName = (url: string | null) => {
     if (!url) return '';
     const pathMatch = url.match(/\/([^/?#]+)(?:[?#]|$)/);

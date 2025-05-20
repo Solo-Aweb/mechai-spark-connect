@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import DxfParser from 'dxf-parser';
-import { supabase } from '@/integrations/supabase/client'; // Fixed the import path
+import { supabase } from '@/integrations/supabase/client';
 
 interface DxfViewerProps {
   /**
@@ -23,19 +23,31 @@ export const DxfViewer = ({ url }: DxfViewerProps) => {
 
     const loadDxf = async () => {
       try {
-        // Fetch the DXF file content
-        const response = await fetch(url, {
-          headers: {
-            'Content-Type': 'text/plain', // Prevent automatic download
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch DXF file: ${response.status} ${response.statusText}`);
+        // Extract bucket and path from URL
+        const urlPattern = /https:\/\/[^/]+\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/;
+        const match = url.match(urlPattern);
+        
+        if (!match || match.length < 3) {
+          throw new Error('Invalid Supabase storage URL format');
+        }
+        
+        const bucketName = match[1];
+        const filePath = match[2].split('?')[0]; // Remove query parameters if any
+        
+        // Download the file using Supabase Storage API
+        const { data: fileBlob, error: downloadError } = await supabase
+          .storage
+          .from(bucketName)
+          .download(filePath);
+          
+        if (downloadError || !fileBlob) {
+          throw new Error(downloadError?.message || 'Failed to download DXF file');
         }
 
-        // Read text and parse
-        const dxfContent = await response.text();
+        // Read the blob as text
+        const dxfContent = await fileBlob.text();
+        
+        // Parse the DXF content
         const parser = new DxfParser();
         const dxfData = parser.parse(dxfContent);
         console.log('DXF data parsed:', dxfData);
@@ -138,6 +150,7 @@ export const DxfViewer = ({ url }: DxfViewerProps) => {
           svgElement.setAttribute('viewBox', `${minX - pad} ${minY - pad} ${width + pad * 2} ${height + pad * 2}`);
         }
 
+        // Clear container before appending
         const container = containerRef.current!;
         container.innerHTML = '';
         container.appendChild(svgElement);

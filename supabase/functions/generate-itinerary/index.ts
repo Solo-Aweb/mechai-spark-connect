@@ -130,9 +130,9 @@ serve(async (req) => {
     // Prepare prompt for OpenAI based on available data
     let prompt;
     if (svgContent) {
-      prompt = `Given these 2D vectors ${JSON.stringify(svgContent)}, shop machines ${JSON.stringify(machines)}, tooling ${JSON.stringify(tooling)}, and materials ${JSON.stringify(materials)}, identify machining features (pockets, holes, slots), then plan ordered machining steps. Return JSON with steps array containing objects with description, machine_id, tooling_id, time, cost, and flag unservable features.`;
+      prompt = `Given these 2D vectors ${JSON.stringify(svgContent)}, shop machines ${JSON.stringify(machines)}, tooling ${JSON.stringify(tooling)}, and materials ${JSON.stringify(materials)}, identify machining features (pockets, holes, slots), then plan ordered machining steps. Return ONLY valid JSON with a "steps" array of objects, where each object has: "description", "machine_id", "tooling_id", "time" (in minutes), and "cost" (numeric) properties.`;
     } else {
-      prompt = `Given these machines ${JSON.stringify(machines)}, tooling ${JSON.stringify(tooling)}, and material ${JSON.stringify(materials)}, plan a sequence of machining steps for part with URL ${part.file_url || 'No file URL available'}. Return JSON with steps array containing objects with description, machine_id, tooling_id, time (in minutes), and cost. Flag any unservable operations.`;
+      prompt = `Given these machines ${JSON.stringify(machines)}, tooling ${JSON.stringify(tooling)}, and material ${JSON.stringify(materials)}, plan a sequence of machining steps for part with URL ${part.file_url || 'No file URL available'}. Return ONLY valid JSON with a "steps" array of objects, where each object has: "description", "machine_id", "tooling_id", "time" (in minutes), and "cost" (numeric) properties.`;
     }
 
     // Call OpenAI API
@@ -190,43 +190,76 @@ serve(async (req) => {
       try {
         // First attempt: direct JSON parsing of the entire content
         itinerary = JSON.parse(aiResponse);
+        console.log('Successfully parsed JSON directly:', JSON.stringify(itinerary));
       } catch (parseError) {
+        console.log('First parse attempt failed:', parseError.message);
+        
         // Second attempt: extract JSON from markdown code blocks or surrounding text
         const jsonMatch = aiResponse.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || 
                           aiResponse.match(/{[\s\S]*?}/);
         
         if (jsonMatch) {
           const jsonText = jsonMatch[1] || jsonMatch[0];
-          itinerary = JSON.parse(jsonText);
+          console.log('Extracted JSON text:', jsonText);
+          try {
+            itinerary = JSON.parse(jsonText);
+            console.log('Successfully parsed extracted JSON:', JSON.stringify(itinerary));
+          } catch (extractedParseError) {
+            console.error('Failed to parse extracted JSON:', extractedParseError);
+            throw new Error('Could not parse extracted JSON from the AI response');
+          }
         } else {
           // If all parsing attempts fail, throw the error
+          console.error('No JSON pattern found in response');
           throw new Error('Could not extract valid JSON from the AI response');
         }
       }
 
+      // Debug log the initial parsed itinerary structure
+      console.log('Initial parsed itinerary structure:', JSON.stringify({
+        hasSteps: !!itinerary.steps,
+        isStepsArray: itinerary.steps && Array.isArray(itinerary.steps),
+        stepsLength: itinerary.steps ? itinerary.steps.length : 0,
+        hasMachiningSteps: !!itinerary.machining_steps,
+        isMachiningStepsArray: itinerary.machining_steps && Array.isArray(itinerary.machining_steps),
+        machiningStepsLength: itinerary.machining_steps ? itinerary.machining_steps.length : 0,
+        isWholeResponseArray: Array.isArray(itinerary)
+      }));
+
       // Handle different response formats and normalize to expected structure
       if (itinerary.machining_steps && Array.isArray(itinerary.machining_steps)) {
+        console.log('Converting machining_steps format to steps format');
         // Convert machining_steps to the expected steps format
         itinerary = {
           steps: itinerary.machining_steps.map(step => ({
-            description: step.operation || step.feature || "Machining step",
+            description: step.operation || step.description || step.feature || "Machining step",
             machine_id: step.machine_id,
             tooling_id: step.tooling_id,
-            time: step.estimated_time || step.time,
-            cost: step.cost,
-            unservable: step.status === "unservable"
+            time: step.estimated_time || step.time || 0,
+            cost: step.cost || 0,
+            unservable: step.status === "unservable" || false
           })),
-          total_cost: itinerary.machining_steps.reduce((sum, step) => sum + (step.cost || 0), 0)
+          total_cost: itinerary.machining_steps.reduce((sum, step) => sum + (parseFloat(step.cost) || 0), 0)
         };
       } else if (!itinerary.steps) {
+        console.log('No steps property found, adapting structure');
         // If there's no steps array but we have other data, try to adapt it
         if (Array.isArray(itinerary)) {
+          console.log('Response is an array, treating as steps');
           // If the entire response is an array, treat it as steps
           itinerary = {
-            steps: itinerary,
-            total_cost: itinerary.reduce((sum, step) => sum + (step.cost || 0), 0)
+            steps: itinerary.map(step => ({
+              description: step.description || step.operation || "Unknown operation",
+              machine_id: step.machine_id || null,
+              tooling_id: step.tooling_id || null,
+              time: step.time || 0,
+              cost: step.cost || 0,
+              unservable: step.unservable || false
+            })),
+            total_cost: itinerary.reduce((sum, step) => sum + (parseFloat(step.cost) || 0), 0)
           };
         } else {
+          console.log('Creating default structure with empty steps');
           // Create a default structure with empty steps
           itinerary = {
             steps: [],
@@ -237,29 +270,35 @@ serve(async (req) => {
 
       // Final check to ensure we have a valid steps array
       if (!itinerary.steps || !Array.isArray(itinerary.steps)) {
-        itinerary = {
-          steps: [],
-          total_cost: 0
-        };
+        console.log('Final check failed, creating default steps array');
+        itinerary.steps = [];
       }
 
-      // Validate each step has required fields
+      // Debug log the steps array after normalization
+      console.log('Steps array after normalization:', JSON.stringify(itinerary.steps));
+      console.log('Steps array length:', itinerary.steps.length);
+
+      // Validate each step has required fields and convert string numbers to actual numbers
       itinerary.steps = itinerary.steps.map(step => ({
         description: step.description || step.operation || "Unknown operation",
         machine_id: step.machine_id || null,
         tooling_id: step.tooling_id || null,
-        time: step.time || 0,
-        cost: step.cost || 0,
+        time: typeof step.time === 'string' ? parseFloat(step.time) : (step.time || 0),
+        cost: typeof step.cost === 'string' ? parseFloat(step.cost) : (step.cost || 0),
         unservable: step.unservable || false
       }));
 
       // Recalculate total cost
-      itinerary.total_cost = itinerary.steps.reduce((sum, step) => sum + (step.cost || 0), 0);
+      itinerary.total_cost = itinerary.steps.reduce((sum, step) => sum + (parseFloat(step.cost) || 0), 0);
+      console.log('Final total cost:', itinerary.total_cost);
+      console.log('Final itinerary structure:', JSON.stringify(itinerary));
 
     } catch (e) {
       console.error('Error parsing AI response:', e);
+      console.error('Original AI response was:', openaiData.choices[0].message.content);
       return new Response(JSON.stringify({ 
         error: 'Failed to parse AI response',
+        message: e.message,
         aiResponse: openaiData.choices[0].message.content 
       }), { 
         status: 500,
@@ -296,7 +335,7 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error('Unexpected error:', error);
-    return new Response(JSON.stringify({ error: 'An unexpected error occurred' }), { 
+    return new Response(JSON.stringify({ error: 'An unexpected error occurred', message: error.message }), { 
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });

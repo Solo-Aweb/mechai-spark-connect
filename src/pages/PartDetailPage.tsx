@@ -20,10 +20,22 @@ interface Part {
   upload_date: string;
 }
 
+interface ItineraryStep {
+  description: string;
+  machine_id: string | null;
+  tooling_id: string | null;
+  time: number;
+  cost: number;
+  unservable?: boolean;
+}
+
 interface Itinerary {
   id: string;
   part_id: string;
-  steps: any;
+  steps: {
+    steps: ItineraryStep[];
+    total_cost: number;
+  };
   total_cost: number;
   created_at: string;
 }
@@ -37,6 +49,7 @@ const PartDetailPage = () => {
   const [generatingItinerary, setGeneratingItinerary] = useState(false);
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
   const [loadingItinerary, setLoadingItinerary] = useState(false);
+  const [itineraryError, setItineraryError] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -72,6 +85,7 @@ const PartDetailPage = () => {
     
     try {
       setLoadingItinerary(true);
+      setItineraryError(null);
       const { data, error } = await supabase
         .from('itineraries')
         .select('*')
@@ -86,10 +100,12 @@ const PartDetailPage = () => {
         }
         setItinerary(null);
       } else {
+        console.log('Itinerary data received:', data);
         setItinerary(data);
       }
     } catch (error) {
       console.error('Error fetching itinerary:', error);
+      setItineraryError('Failed to fetch itinerary data');
     } finally {
       setLoadingItinerary(false);
     }
@@ -184,6 +200,7 @@ const PartDetailPage = () => {
     
     try {
       setGeneratingItinerary(true);
+      setItineraryError(null);
       const { data: tokenData } = await supabase.auth.getSession();
       const token = tokenData?.session?.access_token;
       
@@ -206,6 +223,7 @@ const PartDetailPage = () => {
       const result = await response.json();
       
       if (!response.ok) {
+        console.error('Error response from generate-itinerary:', result);
         throw new Error(result.error || result.details?.message || 'Failed to generate itinerary');
       }
       
@@ -216,10 +234,49 @@ const PartDetailPage = () => {
       
     } catch (error) {
       console.error('Error generating itinerary:', error);
+      setItineraryError(error instanceof Error ? error.message : 'Failed to generate itinerary');
       toast.error(error instanceof Error ? error.message : 'Failed to generate itinerary');
     } finally {
       setGeneratingItinerary(false);
     }
+  };
+  
+  // Helper function to extract steps from the itinerary
+  const getSteps = () => {
+    if (!itinerary) return [];
+    
+    // Check if steps is nested inside another steps property
+    if (itinerary.steps && itinerary.steps.steps && Array.isArray(itinerary.steps.steps)) {
+      return itinerary.steps.steps;
+    }
+    
+    // Check if steps is directly an array
+    if (itinerary.steps && Array.isArray(itinerary.steps)) {
+      return itinerary.steps;
+    }
+    
+    // Try to interpret steps as JSON string
+    if (typeof itinerary.steps === 'string') {
+      try {
+        const parsedSteps = JSON.parse(itinerary.steps);
+        if (parsedSteps.steps && Array.isArray(parsedSteps.steps)) {
+          return parsedSteps.steps;
+        }
+        if (Array.isArray(parsedSteps)) {
+          return parsedSteps;
+        }
+      } catch (e) {
+        console.error('Failed to parse steps from string:', e);
+      }
+    }
+    
+    console.log('Could not extract steps from itinerary. Raw steps data:', itinerary.steps);
+    return [];
+  };
+
+  const hasSteps = () => {
+    const steps = getSteps();
+    return steps.length > 0;
   };
 
   return (
@@ -368,11 +425,11 @@ const PartDetailPage = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y">
-                        {itinerary.steps && Array.isArray(itinerary.steps) ? 
-                          itinerary.steps.map((step: any, index: number) => (
+                        {hasSteps() ? 
+                          getSteps().map((step: ItineraryStep, index: number) => (
                             <tr key={index} className={step.unservable ? "bg-red-50" : ""}>
                               <td className="px-4 py-3 text-sm">{index + 1}</td>
-                              <td className="px-4 py-3 text-sm">{step.description || step.operation || 'N/A'}</td>
+                              <td className="px-4 py-3 text-sm">{step.description || 'N/A'}</td>
                               <td className="px-4 py-3 text-sm">{step.machine_id || 'N/A'}</td>
                               <td className="px-4 py-3 text-sm">{step.tooling_id || 'N/A'}</td>
                               <td className="px-4 py-3 text-sm">{step.time || 'N/A'}</td>
@@ -381,7 +438,7 @@ const PartDetailPage = () => {
                           )) : (
                             <tr>
                               <td colSpan={6} className="px-4 py-3 text-sm text-center text-gray-500">
-                                No steps available
+                                No steps available in the itinerary data
                               </td>
                             </tr>
                           )
@@ -390,8 +447,15 @@ const PartDetailPage = () => {
                     </table>
                   </div>
                   
-                  {itinerary.steps && Array.isArray(itinerary.steps) && 
-                    itinerary.steps.some((step: any) => step.unservable) && (
+                  {itineraryError && (
+                    <Alert className="mt-4" variant="destructive">
+                      <AlertDescription>
+                        {itineraryError}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {getSteps().some((step: ItineraryStep) => step.unservable) && (
                     <Alert className="mt-4" variant="destructive">
                       <AlertDescription>
                         Some operations cannot be serviced with the available machines and tooling.

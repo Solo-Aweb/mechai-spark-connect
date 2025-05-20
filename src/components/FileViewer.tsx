@@ -7,6 +7,7 @@ import DxfParser from 'dxf-parser';
 import * as pdfjsLib from 'pdfjs-dist';
 import { toast } from '@/components/ui/sonner';
 import { Loader2 } from 'lucide-react';
+// Correctly import OpenCascade
 import OpenCascadeInstance from 'opencascade.js';
 
 // Set worker path for PDF.js

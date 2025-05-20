@@ -1,3 +1,4 @@
+
 // Dynamic import for OpenCascade.js
 export default async function OpenCascadeInstance() {
   try {
@@ -6,12 +7,10 @@ export default async function OpenCascadeInstance() {
     const module = await import('opencascade.js?init');
     
     // Handle the correct initialization of the module
-    // If module.default exists and is a function, call it
-    // Otherwise, if module itself is a function, call it
     if (module.default && typeof module.default === 'function') {
       return await module.default();
-    } else if (typeof module === 'function') {
-      return await module();
+    } else if (typeof module === 'object' && module.init && typeof module.init === 'function') {
+      return await module.init();
     } else {
       console.error('Unexpected module structure:', module);
       throw new Error('Failed to initialize OpenCascade: Invalid module structure');

@@ -11,12 +11,19 @@ declare module 'opencascade.js' {
 
 // Add support for the ?init suffix
 declare module 'opencascade.js?init' {
-  function init(): Promise<{
+  export default function init(): Promise<{
     readSTEP: (buffer: ArrayBuffer) => any;
     toThreejsMesh: (shape: any) => {
       geometry: THREE.BufferGeometry;
       mesh?: THREE.Mesh;
     };
   }>;
-  export default init;
+  
+  export function init(): Promise<{
+    readSTEP: (buffer: ArrayBuffer) => any;
+    toThreejsMesh: (shape: any) => {
+      geometry: THREE.BufferGeometry;
+      mesh?: THREE.Mesh;
+    };
+  }>;
 }

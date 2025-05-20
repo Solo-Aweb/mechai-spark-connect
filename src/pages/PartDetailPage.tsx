@@ -1,10 +1,12 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ArrowLeft, Loader2, Download, Trash2, FileCog } from 'lucide-react';
 import { ModelViewer } from '@/components/ModelViewer';
 import { SvgPreview } from '@/components/SvgPreview';
@@ -58,9 +60,7 @@ const PartDetailPage = () => {
       setPart(data);
     } catch (error) {
       console.error('Error fetching part details:', error);
-      toast("Error", {
-        description: 'Could not load part details'
-      });
+      toast.error('Could not load part details');
       navigate('/app/parts');
     } finally {
       setLoading(false);
@@ -135,17 +135,12 @@ const PartDetailPage = () => {
       
       if (error) throw error;
       
-      toast({
-        description: 'Part deleted successfully'
-      });
+      toast.success('Part deleted successfully');
       
       navigate('/app/parts');
     } catch (error) {
       console.error('Error deleting part:', error);
-      toast({
-        variant: "destructive",
-        description: 'Could not delete part'
-      });
+      toast.error('Could not delete part');
     } finally {
       setDeleting(false);
     }
@@ -183,10 +178,7 @@ const PartDetailPage = () => {
 
   const generateItinerary = async () => {
     if (!part || !part.id) {
-      toast({
-        description: 'Part information is missing',
-        variant: "destructive"
-      });
+      toast.error('Part information is missing');
       return;
     }
     
@@ -217,19 +209,14 @@ const PartDetailPage = () => {
         throw new Error(result.error || result.details?.message || 'Failed to generate itinerary');
       }
       
-      toast({
-        description: 'Itinerary generated successfully'
-      });
+      toast.success('Itinerary generated successfully');
       
       // Refresh the itinerary data
       fetchLatestItinerary();
       
     } catch (error) {
       console.error('Error generating itinerary:', error);
-      toast({
-        description: error instanceof Error ? error.message : 'Failed to generate itinerary',
-        variant: "destructive"
-      });
+      toast.error(error instanceof Error ? error.message : 'Failed to generate itinerary');
     } finally {
       setGeneratingItinerary(false);
     }
@@ -405,11 +392,11 @@ const PartDetailPage = () => {
                   
                   {itinerary.steps && Array.isArray(itinerary.steps) && 
                     itinerary.steps.some((step: any) => step.unservable) && (
-                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                      <p className="text-sm text-red-600">
+                    <Alert className="mt-4" variant="destructive">
+                      <AlertDescription>
                         Some operations cannot be serviced with the available machines and tooling.
-                      </p>
-                    </div>
+                      </AlertDescription>
+                    </Alert>
                   )}
                 </CardContent>
               </Card>

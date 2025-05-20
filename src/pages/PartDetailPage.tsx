@@ -11,6 +11,7 @@ import { ArrowLeft, Loader2, Download, Trash2, FileCog } from 'lucide-react';
 import { ModelViewer } from '@/components/ModelViewer';
 import { SvgPreview } from '@/components/SvgPreview';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Json } from '@/integrations/supabase/types';
 
 interface Part {
   id: string;
@@ -29,13 +30,24 @@ interface ItineraryStep {
   unservable?: boolean;
 }
 
+interface ItinerarySteps {
+  steps: ItineraryStep[];
+  total_cost: number;
+}
+
 interface Itinerary {
   id: string;
   part_id: string;
-  steps: {
-    steps: ItineraryStep[];
-    total_cost: number;
-  };
+  steps: ItinerarySteps;
+  total_cost: number;
+  created_at: string;
+}
+
+// Interface matching the actual shape of data from Supabase
+interface ItineraryFromSupabase {
+  id: string;
+  part_id: string;
+  steps: Json;
   total_cost: number;
   created_at: string;
 }
@@ -101,7 +113,70 @@ const PartDetailPage = () => {
         setItinerary(null);
       } else {
         console.log('Itinerary data received:', data);
-        setItinerary(data);
+        // Transform the data to match the Itinerary interface
+        const supabaseData = data as ItineraryFromSupabase;
+        let stepsData: ItinerarySteps;
+        
+        // Parse the steps data which could be in different formats
+        if (typeof supabaseData.steps === 'string') {
+          try {
+            stepsData = JSON.parse(supabaseData.steps);
+          } catch (e) {
+            console.error('Failed to parse steps string:', e);
+            stepsData = { steps: [], total_cost: 0 };
+          }
+        } else if (typeof supabaseData.steps === 'object') {
+          // Handle the case where steps is already an object
+          const stepsObj = supabaseData.steps as any;
+          
+          if (Array.isArray(stepsObj)) {
+            // If steps is directly an array of steps
+            stepsData = {
+              steps: stepsObj.map(step => ({
+                description: step.description || 'Unknown',
+                machine_id: step.machine_id,
+                tooling_id: step.tooling_id,
+                time: step.time || 0,
+                cost: step.cost || 0,
+                unservable: step.unservable || false
+              })),
+              total_cost: stepsObj.reduce((sum, step) => sum + (step.cost || 0), 0)
+            };
+          } else if (stepsObj && stepsObj.steps && Array.isArray(stepsObj.steps)) {
+            // If steps is an object with a steps property that is an array
+            stepsData = {
+              steps: stepsObj.steps.map(step => ({
+                description: step.description || 'Unknown',
+                machine_id: step.machine_id,
+                tooling_id: step.tooling_id,
+                time: step.time || 0,
+                cost: step.cost || 0,
+                unservable: step.unservable || false
+              })),
+              total_cost: stepsObj.total_cost || stepsObj.steps.reduce((sum, step) => sum + (step.cost || 0), 0)
+            };
+          } else {
+            // Default to empty steps if structure is unexpected
+            console.error('Unexpected steps data structure:', stepsObj);
+            stepsData = { steps: [], total_cost: 0 };
+          }
+        } else {
+          // Default case if steps is neither string nor object
+          console.error('Steps data is neither string nor object:', supabaseData.steps);
+          stepsData = { steps: [], total_cost: 0 };
+        }
+        
+        // Create properly formatted itinerary
+        const formattedItinerary: Itinerary = {
+          id: supabaseData.id,
+          part_id: supabaseData.part_id,
+          steps: stepsData,
+          total_cost: supabaseData.total_cost,
+          created_at: supabaseData.created_at
+        };
+        
+        console.log('Transformed itinerary:', formattedItinerary);
+        setItinerary(formattedItinerary);
       }
     } catch (error) {
       console.error('Error fetching itinerary:', error);
@@ -243,35 +318,8 @@ const PartDetailPage = () => {
   
   // Helper function to extract steps from the itinerary
   const getSteps = () => {
-    if (!itinerary) return [];
-    
-    // Check if steps is nested inside another steps property
-    if (itinerary.steps && itinerary.steps.steps && Array.isArray(itinerary.steps.steps)) {
-      return itinerary.steps.steps;
-    }
-    
-    // Check if steps is directly an array
-    if (itinerary.steps && Array.isArray(itinerary.steps)) {
-      return itinerary.steps;
-    }
-    
-    // Try to interpret steps as JSON string
-    if (typeof itinerary.steps === 'string') {
-      try {
-        const parsedSteps = JSON.parse(itinerary.steps);
-        if (parsedSteps.steps && Array.isArray(parsedSteps.steps)) {
-          return parsedSteps.steps;
-        }
-        if (Array.isArray(parsedSteps)) {
-          return parsedSteps;
-        }
-      } catch (e) {
-        console.error('Failed to parse steps from string:', e);
-      }
-    }
-    
-    console.log('Could not extract steps from itinerary. Raw steps data:', itinerary.steps);
-    return [];
+    if (!itinerary || !itinerary.steps) return [];
+    return itinerary.steps.steps || [];
   };
 
   const hasSteps = () => {

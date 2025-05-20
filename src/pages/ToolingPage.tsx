@@ -34,7 +34,7 @@ export default function ToolingPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Query to fetch tools - Enhanced error handling
-  const { data: tools, isLoading: isLoadingTools, isError: isToolsError } = useQuery({
+  const { data: tools, isLoading: isLoadingTools, isError: isToolsError, refetch: refetchTools } = useQuery({
     queryKey: ["tools", selectedMachineId],
     queryFn: async () => {
       try {
@@ -74,7 +74,8 @@ export default function ToolingPage() {
   const { 
     data: machines, 
     isLoading: isLoadingMachines,
-    isError: isMachinesError 
+    isError: isMachinesError,
+    refetch: refetchMachines
   } = useQuery({
     queryKey: ["machines-dropdown"],
     queryFn: async () => {
@@ -102,6 +103,18 @@ export default function ToolingPage() {
     retry: 1,
     refetchOnWindowFocus: false,
   });
+
+  // Refetch data after auth session changes
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(() => {
+      refetchTools();
+      refetchMachines();
+    });
+
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, [refetchTools, refetchMachines]);
 
   // Log initial render
   useEffect(() => {

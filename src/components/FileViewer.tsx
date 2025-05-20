@@ -7,13 +7,8 @@ import * as pdfjsLib from 'pdfjs-dist';
 import { toast } from '@/components/ui/sonner';
 import { Loader2 } from 'lucide-react';
 
-// Load OpenCascade dynamically
-let OpenCascadeInstance: any = null;
-import('@/lib/openCascadeLoader').then(module => {
-  OpenCascadeInstance = module.default;
-}).catch(err => {
-  console.error('Failed to load OpenCascade:', err);
-});
+// Import our OpenCascade loader
+import loadOpenCascade from '@/lib/openCascadeLoader';
 
 // Set worker path for PDF.js
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist/build/pdf.worker.js';
@@ -88,12 +83,8 @@ export const FileViewer = ({ url, fileType }: FileViewerProps) => {
       const buffer = await response.arrayBuffer();
       console.log('STEP file fetched, size:', buffer.byteLength);
 
-      if (!OpenCascadeInstance) {
-        OpenCascadeInstance = await import('@/lib/openCascadeLoader').then(module => module.default);
-      }
-
-      // Load OpenCascade
-      const occ = await OpenCascadeInstance();
+      // Load OpenCascade using our loader
+      const occ = await loadOpenCascade();
       console.log('OpenCascade loaded');
 
       // Read the STEP file

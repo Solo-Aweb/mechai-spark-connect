@@ -1,38 +1,41 @@
+
 import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import DxfParser from 'dxf-parser';
-import { supabase } from '../lib/supabaseClient'; // ensure your Supabase client is configured
+import { supabase } from '@/integrations/supabase/client'; // Fixed the import path
 
 interface DxfViewerProps {
   /**
-   * The storage path of the DXF file in Supabase (e.g. 'parts/myDrawing.dxf')
+   * The URL of the DXF file to display
    */
-  filePath: string;
+  url: string;
 }
 
-export const DxfViewer = ({ filePath }: DxfViewerProps) => {
+export const DxfViewer = ({ url }: DxfViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!containerRef.current || !filePath) return;
+    if (!containerRef.current || !url) return;
     setIsLoading(true);
     setError(null);
 
     const loadDxf = async () => {
       try {
-        // Download raw DXF bytes from Supabase Storage
-        const { data: fileBlob, error: downloadError } = await supabase
-          .storage
-          .from('parts')
-          .download(filePath);
-        if (downloadError || !fileBlob) {
-          throw new Error(downloadError?.message || 'Failed to download DXF file');
+        // Fetch the DXF file content
+        const response = await fetch(url, {
+          headers: {
+            'Content-Type': 'text/plain', // Prevent automatic download
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch DXF file: ${response.status} ${response.statusText}`);
         }
 
         // Read text and parse
-        const dxfContent = await fileBlob.text();
+        const dxfContent = await response.text();
         const parser = new DxfParser();
         const dxfData = parser.parse(dxfContent);
         console.log('DXF data parsed:', dxfData);
@@ -147,7 +150,7 @@ export const DxfViewer = ({ filePath }: DxfViewerProps) => {
     };
 
     loadDxf();
-  }, [filePath]);
+  }, [url]);
 
   return (
     <div className="w-full h-full relative">
@@ -168,4 +171,3 @@ export const DxfViewer = ({ filePath }: DxfViewerProps) => {
     </div>
   );
 };
-

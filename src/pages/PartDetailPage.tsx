@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -136,14 +135,15 @@ const PartDetailPage = () => {
       
       if (error) throw error;
       
-      toast("Success", {
+      toast({
         description: 'Part deleted successfully'
       });
       
       navigate('/app/parts');
     } catch (error) {
       console.error('Error deleting part:', error);
-      toast("Error", {
+      toast({
+        variant: "destructive",
         description: 'Could not delete part'
       });
     } finally {
@@ -184,7 +184,6 @@ const PartDetailPage = () => {
   const generateItinerary = async () => {
     if (!part || !part.id) {
       toast({
-        title: "Error",
         description: 'Part information is missing',
         variant: "destructive"
       });
@@ -219,7 +218,6 @@ const PartDetailPage = () => {
       }
       
       toast({
-        title: "Success",
         description: 'Itinerary generated successfully'
       });
       
@@ -229,7 +227,6 @@ const PartDetailPage = () => {
     } catch (error) {
       console.error('Error generating itinerary:', error);
       toast({
-        title: "Error",
         description: error instanceof Error ? error.message : 'Failed to generate itinerary',
         variant: "destructive"
       });

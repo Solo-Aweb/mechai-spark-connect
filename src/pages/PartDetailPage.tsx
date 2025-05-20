@@ -128,11 +128,57 @@ const PartDetailPage = () => {
           stepsData = { steps: [], total_cost: 0 };
         }
         
-        // Create properly formatted itinerary
+        // Fetch machine and tool names for each step
+        const enhancedSteps = await Promise.all(
+          stepsData.steps.map(async (step) => {
+            let machineData = null;
+            let toolData = null;
+            
+            // Fetch machine details if machine_id exists
+            if (step.machine_id) {
+              const { data: machine } = await supabase
+                .from('machines')
+                .select('name')
+                .eq('id', step.machine_id)
+                .single();
+                
+              if (machine) {
+                machineData = machine;
+              }
+            }
+            
+            // Fetch tool details if tooling_id exists
+            if (step.tooling_id) {
+              const { data: tool } = await supabase
+                .from('tooling')
+                .select('tool_name')
+                .eq('id', step.tooling_id)
+                .single();
+                
+              if (tool) {
+                toolData = tool;
+              }
+            }
+            
+            return {
+              ...step,
+              machine_name: machineData?.name || step.machine_name || step.machine_id,
+              tool_name: toolData?.tool_name || step.tool_name || step.tooling_id,
+              hourly_rate: 25, // Example default value
+              tool_wear_cost: 5, // Example default value
+              setup_cost: 10 // Example default value
+            };
+          })
+        );
+        
+        // Create properly formatted itinerary with enhanced steps
         const formattedItinerary: Itinerary = {
           id: supabaseData.id,
           part_id: supabaseData.part_id,
-          steps: stepsData,
+          steps: {
+            steps: enhancedSteps,
+            total_cost: stepsData.total_cost
+          },
           total_cost: supabaseData.total_cost,
           created_at: supabaseData.created_at
         };

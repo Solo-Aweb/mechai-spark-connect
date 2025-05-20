@@ -10,6 +10,9 @@ export interface ItineraryStep {
   unservable?: boolean;
   machine_name?: string;
   tool_name?: string;
+  hourly_rate?: number;
+  tool_wear_cost?: number;
+  setup_cost?: number;
 }
 
 export interface ItinerarySteps {

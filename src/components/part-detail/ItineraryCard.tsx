@@ -8,17 +8,19 @@ import {
   CardTitle,
   CardFooter
 } from "@/components/ui/card";
-import { formatDate } from "@/utils/formatters";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { formatDate, formatCurrency, formatTime } from "@/utils/formatters";
 import { ItineraryStep, Itinerary } from "@/types/itinerary";
 import { Loader2 } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 interface ItineraryCardProps {
   itinerary: Itinerary | null;
@@ -62,7 +64,7 @@ export const ItineraryCard = ({
         <CardTitle>Machining Itinerary</CardTitle>
         <CardDescription>
           Generated on {formatDate(itinerary.created_at)} • 
-          Total Cost: ${itinerary.total_cost.toFixed(2)}
+          Total Cost: {formatCurrency(itinerary.total_cost)}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -75,7 +77,7 @@ export const ItineraryCard = ({
                 <TableHead>Machine</TableHead>
                 <TableHead>Tool</TableHead>
                 <TableHead>Time (min)</TableHead>
-                <TableHead>Cost ($)</TableHead>
+                <TableHead>Cost</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -84,10 +86,10 @@ export const ItineraryCard = ({
                   <TableRow key={index} className={step.unservable ? "bg-red-50" : ""}>
                     <TableCell>{index + 1}</TableCell>
                     <TableCell>{step.description || 'N/A'}</TableCell>
-                    <TableCell>{step.machine_name || step.machine_id || 'N/A'}</TableCell>
-                    <TableCell>{step.tool_name || step.tooling_id || 'N/A'}</TableCell>
+                    <TableCell>{step.machine_name || 'Unknown Machine'}</TableCell>
+                    <TableCell>{step.tool_name || 'Unknown Tool'}</TableCell>
                     <TableCell>{step.time || 'N/A'}</TableCell>
-                    <TableCell>{step.cost ? `$${step.cost.toFixed(2)}` : 'N/A'}</TableCell>
+                    <TableCell>{formatCurrency(step.cost || 0)}</TableCell>
                   </TableRow>
                 )) : (
                   <TableRow>
@@ -117,22 +119,56 @@ export const ItineraryCard = ({
           </Alert>
         )}
       </CardContent>
-      <CardFooter>
-        <div className="w-full space-y-2 text-sm text-muted-foreground">
-          <h4 className="font-medium text-foreground">How costs are calculated:</h4>
-          <p>
-            Each machining step cost is based on the machine usage time and tool wear.
-            The formula typically includes:
-          </p>
-          <ul className="list-disc pl-5 space-y-1">
-            <li>Machine hourly rate × operation time</li>
-            <li>Tool wear cost per operation</li>
-            <li>Setup and material handling costs</li>
-          </ul>
-          <p>
-            Total cost is the sum of all individual step costs. Costs may vary based on 
-            machine availability and complexity of operations.
-          </p>
+      <CardFooter className="flex flex-col items-start">
+        <div className="w-full space-y-4">
+          <h4 className="font-medium text-foreground">Cost Calculation Parameters</h4>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Machine Hourly Rate</label>
+              <Input 
+                type="number" 
+                placeholder="$25.00" 
+                className="w-full" 
+                defaultValue="25"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tool Wear Cost (per operation)</label>
+              <Input 
+                type="number" 
+                placeholder="$5.00" 
+                className="w-full" 
+                defaultValue="5"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Setup Cost</label>
+              <Input 
+                type="number" 
+                placeholder="$10.00" 
+                className="w-full" 
+                defaultValue="10"
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-2 w-full">
+            <label className="text-sm font-medium">Calculation Formula</label>
+            <Textarea 
+              readOnly 
+              className="font-mono text-sm bg-muted"
+              value={`For each step:
+Machine cost = Hourly rate × (Time in minutes ÷ 60)
+Total step cost = Machine cost + Tool wear cost + Setup cost
+
+Example for step 1 (${getSteps()[0]?.time || 30} minutes):
+$25/hr × (${getSteps()[0]?.time || 30} min ÷ 60) = $${((25 * (getSteps()[0]?.time || 30)) / 60).toFixed(2)}
+$${((25 * (getSteps()[0]?.time || 30)) / 60).toFixed(2)} + $5 + $10 = $${(((25 * (getSteps()[0]?.time || 30)) / 60) + 5 + 10).toFixed(2)}
+
+Total cost is the sum of all individual step costs: ${formatCurrency(itinerary.total_cost)}`}
+            />
+          </div>
         </div>
       </CardFooter>
     </Card>

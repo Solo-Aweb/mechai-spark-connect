@@ -4,53 +4,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, Loader2, Download, Trash2, FileCog } from 'lucide-react';
-import { ModelViewer } from '@/components/ModelViewer';
-import { SvgPreview } from '@/components/SvgPreview';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Json } from '@/integrations/supabase/types';
-
-interface Part {
-  id: string;
-  name: string;
-  file_url: string | null;
-  svg_url: string | null;
-  upload_date: string;
-}
-
-interface ItineraryStep {
-  description: string;
-  machine_id: string | null;
-  tooling_id: string | null;
-  time: number;
-  cost: number;
-  unservable?: boolean;
-}
-
-interface ItinerarySteps {
-  steps: ItineraryStep[];
-  total_cost: number;
-}
-
-interface Itinerary {
-  id: string;
-  part_id: string;
-  steps: ItinerarySteps;
-  total_cost: number;
-  created_at: string;
-}
-
-// Interface matching the actual shape of data from Supabase
-interface ItineraryFromSupabase {
-  id: string;
-  part_id: string;
-  steps: Json;
-  total_cost: number;
-  created_at: string;
-}
+import { ArrowLeft, Loader2 } from 'lucide-react';
+import { PartInfoCard } from '@/components/part-detail/PartInfoCard';
+import { PartPreviewCard } from '@/components/part-detail/PartPreviewCard';
+import { ItineraryCard } from '@/components/part-detail/ItineraryCard';
+import { DeletePartDialog } from '@/components/part-detail/DeletePartDialog';
+import { Part } from '@/types/part';
+import { Itinerary, ItineraryFromSupabase, ItinerarySteps } from '@/types/itinerary';
 
 const PartDetailPage = () => {
   const { id } = useParams();
@@ -246,14 +208,6 @@ const PartDetailPage = () => {
     document.body.removeChild(link);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
-
   // Determine if the file is a 3D model based on file extension
   const is3DModel = (url: string | null) => {
     if (!url) return false;
@@ -315,17 +269,6 @@ const PartDetailPage = () => {
       setGeneratingItinerary(false);
     }
   };
-  
-  // Helper function to extract steps from the itinerary
-  const getSteps = () => {
-    if (!itinerary || !itinerary.steps) return [];
-    return itinerary.steps.steps || [];
-  };
-
-  const hasSteps = () => {
-    const steps = getSteps();
-    return steps.length > 0;
-  };
 
   return (
     <AppLayout>
@@ -336,27 +279,11 @@ const PartDetailPage = () => {
           </Button>
           
           {part && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" disabled={deleting}>
-                  <Trash2 className="mr-2 h-4 w-4" /> 
-                  {deleting ? 'Deleting...' : 'Delete Part'}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the part
-                    and any associated files.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <DeletePartDialog 
+              part={part} 
+              deleting={deleting} 
+              onDelete={handleDelete} 
+            />
           )}
         </div>
 
@@ -366,153 +293,26 @@ const PartDetailPage = () => {
           </div>
         ) : part ? (
           <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>{part.name}</CardTitle>
-                <CardDescription>
-                  Uploaded on {formatDate(part.upload_date)}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="font-medium">ID:</div>
-                    <div className="col-span-2 font-mono text-sm">{part.id}</div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="font-medium">Upload Date:</div>
-                    <div className="col-span-2">{formatDate(part.upload_date)}</div>
-                  </div>
-                  <div className="mt-4">
-                    <Button 
-                      onClick={generateItinerary} 
-                      disabled={generatingItinerary}
-                      className="w-full"
-                    >
-                      {generatingItinerary ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Generating Itinerary...
-                        </>
-                      ) : (
-                        <>
-                          <FileCog className="mr-2 h-4 w-4" />
-                          Generate Machining Itinerary
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="flex justify-end gap-2">
-                {part.file_url && (
-                  <Button 
-                    variant="outline"
-                    onClick={() => handleDownload(part.file_url!, extractFileName(part.file_url))}
-                  >
-                    <Download className="mr-2 h-4 w-4" /> Download File
-                  </Button>
-                )}
-                {part.svg_url && (
-                  <Button 
-                    variant="outline"
-                    onClick={() => handleDownload(part.svg_url!, extractFileName(part.svg_url))}
-                  >
-                    <Download className="mr-2 h-4 w-4" /> Download SVG
-                  </Button>
-                )}
-              </CardFooter>
-            </Card>
+            <PartInfoCard
+              part={part}
+              generatingItinerary={generatingItinerary}
+              generateItinerary={generateItinerary}
+              handleDownload={handleDownload}
+              extractFileName={extractFileName}
+            />
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Preview</CardTitle>
-              </CardHeader>
-              <CardContent className="px-2 pb-2">
-                {part.svg_url ? (
-                  <SvgPreview url={part.svg_url} altText={`${part.name} preview`} />
-                ) : part.file_url && is3DModel(part.file_url) ? (
-                  <ModelViewer 
-                    url={part.file_url} 
-                    fileType={part.file_url.split('.').pop()?.toLowerCase() || ''}
-                  />
-                ) : (
-                  <div className="flex items-center justify-center p-10 bg-gray-50 rounded-md">
-                    <p className="text-gray-400">No preview available</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <PartPreviewCard
+              part={part}
+              is3DModel={is3DModel}
+            />
 
-            {loadingItinerary ? (
-              <Card className="md:col-span-2">
-                <CardContent className="flex justify-center py-10">
-                  <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-                </CardContent>
-              </Card>
-            ) : itinerary ? (
-              <Card className="md:col-span-2">
-                <CardHeader>
-                  <CardTitle>Machining Itinerary</CardTitle>
-                  <CardDescription>
-                    Generated on {formatDate(itinerary.created_at)} • 
-                    Total Cost: ${itinerary.total_cost.toFixed(2)}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="border rounded-md overflow-hidden">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Step</th>
-                          <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Operation</th>
-                          <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Machine</th>
-                          <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Tool</th>
-                          <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Time (min)</th>
-                          <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Cost ($)</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        {hasSteps() ? 
-                          getSteps().map((step: ItineraryStep, index: number) => (
-                            <tr key={index} className={step.unservable ? "bg-red-50" : ""}>
-                              <td className="px-4 py-3 text-sm">{index + 1}</td>
-                              <td className="px-4 py-3 text-sm">{step.description || 'N/A'}</td>
-                              <td className="px-4 py-3 text-sm">{step.machine_id || 'N/A'}</td>
-                              <td className="px-4 py-3 text-sm">{step.tooling_id || 'N/A'}</td>
-                              <td className="px-4 py-3 text-sm">{step.time || 'N/A'}</td>
-                              <td className="px-4 py-3 text-sm">{step.cost ? `$${step.cost.toFixed(2)}` : 'N/A'}</td>
-                            </tr>
-                          )) : (
-                            <tr>
-                              <td colSpan={6} className="px-4 py-3 text-sm text-center text-gray-500">
-                                No steps available in the itinerary data
-                              </td>
-                            </tr>
-                          )
-                        }
-                      </tbody>
-                    </table>
-                  </div>
-                  
-                  {itineraryError && (
-                    <Alert className="mt-4" variant="destructive">
-                      <AlertDescription>
-                        {itineraryError}
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
-                  {getSteps().some((step: ItineraryStep) => step.unservable) && (
-                    <Alert className="mt-4" variant="destructive">
-                      <AlertDescription>
-                        Some operations cannot be serviced with the available machines and tooling.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </CardContent>
-              </Card>
-            ) : null}
+            <div className="md:col-span-2">
+              <ItineraryCard
+                itinerary={itinerary}
+                loadingItinerary={loadingItinerary}
+                itineraryError={itineraryError}
+              />
+            </div>
           </div>
         ) : (
           <Card>

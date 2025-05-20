@@ -147,7 +147,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are a CNC machining expert tasked with planning machining operations.'
+            content: 'You are a CNC machining expert tasked with planning machining operations. Return ONLY valid JSON without any explanations or markdown formatting.'
           },
           {
             role: 'user',
@@ -185,16 +185,34 @@ serve(async (req) => {
     let itinerary;
     try {
       const aiResponse = openaiData.choices[0].message.content;
-      // Extract JSON from the response
-      const jsonMatch = aiResponse.match(/```json\s+([\s\S]*?)\s+```/) || 
-                       aiResponse.match(/{[\s\S]*}/);
-      
-      if (jsonMatch) {
-        itinerary = JSON.parse(jsonMatch[1] || jsonMatch[0]);
-      } else {
-        // If no JSON format is detected, try to parse the entire response
+      console.log('Raw AI response content:', aiResponse);
+
+      // Try different parsing strategies
+      try {
+        // First attempt: direct JSON parsing of the entire content
         itinerary = JSON.parse(aiResponse);
+      } catch (parseError) {
+        // Second attempt: extract JSON from markdown code blocks or surrounding text
+        const jsonMatch = aiResponse.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || 
+                          aiResponse.match(/{[\s\S]*?}/);
+        
+        if (jsonMatch) {
+          const jsonText = jsonMatch[1] || jsonMatch[0];
+          itinerary = JSON.parse(jsonText);
+        } else {
+          // If all parsing attempts fail, throw the error
+          throw new Error('Could not extract valid JSON from the AI response');
+        }
       }
+      
+      // Ensure itinerary has a steps array
+      if (!itinerary || !itinerary.steps || !Array.isArray(itinerary.steps)) {
+        itinerary = {
+          steps: [],
+          total_cost: 0
+        };
+      }
+
     } catch (e) {
       console.error('Error parsing AI response:', e);
       return new Response(JSON.stringify({ 

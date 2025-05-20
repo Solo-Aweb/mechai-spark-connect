@@ -2,7 +2,6 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, useGLTF } from '@react-three/drei';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js';
 import DxfParser from 'dxf-parser';
@@ -256,69 +255,176 @@ export const FileViewer = ({ url, fileType }: FileViewerProps) => {
 // Separate component for 3D model rendering
 const ModelRenderer = ({ url }: { url: string }) => {
   const [modelError, setModelError] = useState<string | null>(null);
-  
-  return (
-    <>
-      {modelError ? (
-        <div className="w-full h-full flex items-center justify-center">
-          <p className="text-red-500">{modelError}</p>
-        </div>
-      ) : (
-        <Canvas
-          camera={{ position: [0, 0, 5], fov: 75 }}
-          style={{ width: '100%', height: '400px' }}
-        >
-          <ambientLight intensity={0.5} />
-          <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} />
-          <directionalLight position={[5, 5, 5]} intensity={1} />
-          <STLModel 
-            url={url} 
-            onError={(err) => setModelError(`Failed to load 3D model: ${err}`)}
-          />
-          <OrbitControls enableDamping autoRotate={false} />
-        </Canvas>
-      )}
-    </>
-  );
-};
-
-// STL model component using Three.js and react-three-fiber
-const STLModel = ({ url, onError }: { url: string, onError: (err: string) => void }) => {
-  const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
-    const loader = new STLLoader();
+    if (!containerRef.current) return;
     
+    // Set up the Three.js scene
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf0f0f0);
+    
+    // Add lighting
+    const ambientLight = new THREE.AmbientLight(0x404040, 2);
+    scene.add(ambientLight);
+    
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
+    directionalLight.position.set(1, 1, 1).normalize();
+    scene.add(directionalLight);
+    
+    // Set up camera
+    const container = containerRef.current;
+    const width = container.clientWidth;
+    const height = container.clientHeight || 400;
+    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+    camera.position.z = 5;
+    
+    // Set up renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(width, height);
+    
+    // Clear container and add renderer
+    while (container.firstChild) {
+      container.removeChild(container.firstChild);
+    }
+    container.appendChild(renderer.domElement);
+    
+    // Load STL model
+    const loader = new STLLoader();
     loader.load(
       url,
-      (loadedGeometry) => {
+      (geometry) => {
+        const material = new THREE.MeshPhongMaterial({
+          color: 0x3f88c5,
+          specular: 0x111111,
+          shininess: 200
+        });
+        
+        const mesh = new THREE.Mesh(geometry, material);
+        
         // Center the model
-        loadedGeometry.computeBoundingBox();
-        if (loadedGeometry.boundingBox) {
-          const center = new THREE.Vector3();
-          loadedGeometry.boundingBox.getCenter(center);
-          loadedGeometry.translate(-center.x, -center.y, -center.z);
+        geometry.computeBoundingBox();
+        const center = new THREE.Vector3();
+        if (geometry.boundingBox) {
+          geometry.boundingBox.getCenter(center);
+          mesh.position.sub(center);
         }
         
-        setGeometry(loadedGeometry);
+        scene.add(mesh);
+        
+        // Set up orbit controls manually
+        let isMouseDown = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        
+        const handleMouseDown = (e) => {
+          isMouseDown = true;
+          previousMousePosition = {
+            x: e.clientX,
+            y: e.clientY
+          };
+        };
+        
+        const handleMouseMove = (e) => {
+          if (!isMouseDown) return;
+          
+          const deltaMove = {
+            x: e.clientX - previousMousePosition.x,
+            y: e.clientY - previousMousePosition.y
+          };
+          
+          const rotationSpeed = 0.01;
+          mesh.rotation.y += deltaMove.x * rotationSpeed;
+          mesh.rotation.x += deltaMove.y * rotationSpeed;
+          
+          previousMousePosition = {
+            x: e.clientX,
+            y: e.clientY
+          };
+        };
+        
+        const handleMouseUp = () => {
+          isMouseDown = false;
+        };
+        
+        const handleWheel = (e) => {
+          e.preventDefault();
+          
+          // Adjust camera position based on wheel delta
+          camera.position.z += (e.deltaY > 0) ? 0.5 : -0.5;
+          
+          // Limit zoom range
+          camera.position.z = Math.max(2, Math.min(10, camera.position.z));
+        };
+        
+        // Add event listeners
+        renderer.domElement.addEventListener('mousedown', handleMouseDown);
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        renderer.domElement.addEventListener('wheel', handleWheel);
+        
+        // Animation loop
+        const animate = () => {
+          requestAnimationFrame(animate);
+          
+          // Add slight rotation when not being manipulated
+          if (!isMouseDown) {
+            mesh.rotation.y += 0.001;
+          }
+          
+          renderer.render(scene, camera);
+        };
+        
+        animate();
+        
+        // Cleanup function
+        return () => {
+          renderer.domElement.removeEventListener('mousedown', handleMouseDown);
+          document.removeEventListener('mousemove', handleMouseMove);
+          document.removeEventListener('mouseup', handleMouseUp);
+          renderer.domElement.removeEventListener('wheel', handleWheel);
+          
+          renderer.dispose();
+          geometry.dispose();
+          material.dispose();
+        };
       },
       undefined,
       (error) => {
         console.error('Error loading STL:', error);
-        onError('Failed to load STL file');
+        setModelError('Failed to load STL model');
       }
     );
-  }, [url, onError]);
-  
-  if (!geometry) return null;
+    
+    // Handle window resize
+    const handleResize = () => {
+      if (!containerRef.current) return;
+      
+      const width = containerRef.current.clientWidth;
+      const height = containerRef.current.clientHeight || 400;
+      
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      
+      // Dispose of Three.js resources
+      renderer.dispose();
+      scene.clear();
+    };
+  }, [url]);
   
   return (
-    <mesh geometry={geometry}>
-      <meshPhongMaterial 
-        color={0x3f88c5}
-        specular={0x111111}
-        shininess={200}
-      />
-    </mesh>
+    <div ref={containerRef} className="w-full h-full">
+      {modelError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70">
+          <p className="text-red-500">{modelError}</p>
+        </div>
+      )}
+    </div>
   );
 };

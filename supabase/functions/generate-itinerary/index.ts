@@ -143,7 +143,7 @@ serve(async (req) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'o4-mini-2025-04-16',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -153,8 +153,8 @@ serve(async (req) => {
             role: 'user',
             content: prompt
           }
-        ],
-        temperature: 0.2
+        ]
+        // Removed the temperature parameter as it's not supported by this model
       })
     });
 

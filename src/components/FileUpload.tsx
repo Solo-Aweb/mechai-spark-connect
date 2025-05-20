@@ -61,7 +61,8 @@ export const FileUpload = ({
       
       // Create a unique file name with timestamp
       const fileExt = file.name.split('.').pop()?.toLowerCase();
-      const fileName = `${Date.now()}-${file.name}`;
+      const timestamp = Date.now();
+      const fileName = `${timestamp}-${file.name}`;
       const filePath = `models/${fileName}`;
       
       // Determine the bucket based on file type
@@ -72,7 +73,9 @@ export const FileUpload = ({
       // Upload the file
       const { data, error } = await supabase.storage
         .from(bucketName)
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          upsert: true // Enable overwriting if the file exists
+        });
       
       if (error) throw error;
       
@@ -103,22 +106,31 @@ export const FileUpload = ({
           description: "Converting PDF to SVG for preview..."
         });
         
-        const { data: conversionData, error: conversionError } = await supabase.functions
-          .invoke('pdfToSvg', {
-            body: { 
-              pdfUrl: publicUrl, 
-              fileName: file.name,
-              partId: partId
-            }
+        try {
+          const { data: conversionData, error: conversionError } = await supabase.functions
+            .invoke('pdfToSvg', {
+              body: { 
+                pdfUrl: publicUrl, 
+                fileName: file.name,
+                partId: partId
+              }
+            });
+          
+          if (conversionError) throw conversionError;
+
+          toast("Upload complete", {
+            description: "File has been uploaded and processed successfully"
           });
-        
-        if (conversionError) throw conversionError;
-        
-        toast("Upload complete", {
-          description: "File has been uploaded and processed successfully"
-        });
-        
-        onUploadComplete(publicUrl, file.name, conversionData?.svgUrl);
+          
+          onUploadComplete(publicUrl, file.name, conversionData?.svgUrl);
+        } catch (conversionError) {
+          console.error('Error converting PDF:', conversionError);
+          toast("PDF Conversion Error", {
+            description: "The file was uploaded but PDF conversion failed. You may need to try again."
+          });
+          
+          onUploadComplete(publicUrl, file.name);
+        }
       } 
       // For SVG and DXF files, we can use them directly
       else if (fileExt === 'svg' || fileExt === 'dxf') {

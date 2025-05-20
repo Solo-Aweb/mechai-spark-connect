@@ -36,16 +36,19 @@ serve(async (req) => {
       </text>
     </svg>`
     
-    // Upload the SVG to storage
-    const svgFileName = fileName.replace('.pdf', '.svg')
-    const svgPath = `models/${svgFileName}`
+    // Create a unique filename to avoid collisions
+    const timestamp = Date.now()
+    const uniqueFileName = fileName.replace('.pdf', `-${timestamp}.svg`)
+    const svgPath = `models/${uniqueFileName}`
     
+    // Upload the SVG to storage with upsert option to overwrite if file exists
     const { data: svgUploadData, error: svgUploadError } = await supabase
       .storage
       .from('svg_files')
       .upload(svgPath, svgContent, {
         contentType: 'image/svg+xml',
-        cacheControl: '3600'
+        cacheControl: '3600',
+        upsert: true // This will overwrite the file if it exists
       })
     
     if (svgUploadError) throw svgUploadError

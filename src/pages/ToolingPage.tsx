@@ -124,6 +124,11 @@ export default function ToolingPage() {
     };
   }, []);
 
+  // Clear error function
+  const clearError = () => {
+    setError(null);
+  };
+
   return (
     <AppLayout>
       <ToolingHeader 
@@ -138,6 +143,7 @@ export default function ToolingPage() {
         error={error}
         isToolsError={isToolsError}
         isMachinesError={isMachinesError}
+        clearError={clearError}
       />
 
       <ToolingTable 

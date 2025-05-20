@@ -11,7 +11,7 @@ declare module 'opencascade.js' {
 
 // Add support for the ?init suffix
 declare module 'opencascade.js?init' {
-  const init: () => Promise<{
+  function init(): Promise<{
     readSTEP: (buffer: ArrayBuffer) => any;
     toThreejsMesh: (shape: any) => {
       geometry: THREE.BufferGeometry;

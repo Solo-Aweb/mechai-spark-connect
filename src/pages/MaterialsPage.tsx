@@ -42,6 +42,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Json } from "@/integrations/supabase/types";
+import { ErrorDisplay } from "@/components/tooling/ErrorDisplay";
 
 // Define the Material type based on the database schema
 type Material = {
@@ -77,44 +78,68 @@ type MaterialFormValues = z.infer<typeof materialFormSchema>;
 
 export default function MaterialsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  // Query to fetch materials
-  const { data: materials, isLoading } = useQuery({
+  // Query to fetch materials with enhanced error handling
+  const { data: materials, isLoading, isError: isMaterialsError } = useQuery({
     queryKey: ["materials"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("materials")
-        .select("*")
-        .order("created_at", { ascending: false });
+      try {
+        console.log("Fetching materials");
+        const { data, error } = await supabase
+          .from("materials")
+          .select("*")
+          .order("created_at", { ascending: false });
 
-      if (error) {
-        throw new Error(error.message);
+        if (error) {
+          console.error("Error fetching materials:", error);
+          toast.error("Failed to fetch materials");
+          setError("Failed to load materials. Please try again later.");
+          throw new Error(error.message);
+        }
+        return data as Material[];
+      } catch (error) {
+        console.error("Unexpected error fetching materials:", error);
+        setError("An unexpected error occurred while loading materials.");
+        throw error;
       }
-      return data as Material[];
     },
+    retry: 1,
+    refetchOnWindowFocus: false,
   });
 
   // Fix the mutation to ensure all required fields are provided
   const addMaterialMutation = useMutation({
     mutationFn: async (values: MaterialFormValues) => {
-      // Fix to ensure all required fields are properly set
-      const materialData = {
-        name: values.name,
-        stock_type: values.stock_type,
-        unit_cost: values.unit_cost,
-        dimensions: values.dimensions as Json
-      };
-      
-      const { data, error } = await supabase
-        .from("materials")
-        .insert([materialData])
-        .select();
+      try {
+        // Fix to ensure all required fields are properly set
+        const materialData = {
+          name: values.name,
+          stock_type: values.stock_type,
+          unit_cost: values.unit_cost,
+          dimensions: values.dimensions as Json
+        };
+        
+        const { data, error } = await supabase
+          .from("materials")
+          .insert([materialData])
+          .select();
 
-      if (error) {
-        throw new Error(error.message);
+        if (error) {
+          console.error("Error adding material:", error);
+          setError(`Error adding material: ${error.message}`);
+          throw new Error(error.message);
+        }
+        return data;
+      } catch (error) {
+        if (error instanceof Error) {
+          setError(`Error adding material: ${error.message}`);
+        } else {
+          setError("An unexpected error occurred");
+        }
+        throw error;
       }
-      return data;
     },
     onSuccess: () => {
       toast.success("Material added successfully");
@@ -305,6 +330,11 @@ export default function MaterialsPage() {
     }
   };
 
+  // Clear error function
+  const clearError = () => {
+    setError(null);
+  };
+
   return (
     <AppLayout>
       <div className="flex justify-between items-center mb-6">
@@ -387,6 +417,13 @@ export default function MaterialsPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <ErrorDisplay 
+        error={error}
+        isToolsError={false}
+        isMachinesError={false}
+        clearError={clearError}
+      />
 
       {isLoading ? (
         <div className="flex justify-center py-8">

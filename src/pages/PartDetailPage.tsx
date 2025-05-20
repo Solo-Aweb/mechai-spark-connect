@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from '@/components/ui/sonner';
+import { toast } from '@/components/ui/use-toast';
 import { ArrowLeft, Loader2, Download, Trash2, FileCog } from 'lucide-react';
 import { ModelViewer } from '@/components/ModelViewer';
 import { SvgPreview } from '@/components/SvgPreview';
@@ -182,8 +183,10 @@ const PartDetailPage = () => {
 
   const generateItinerary = async () => {
     if (!part || !part.id) {
-      toast("Error", {
-        description: 'Part information is missing'
+      toast({
+        title: "Error",
+        description: 'Part information is missing',
+        variant: "destructive"
       });
       return;
     }
@@ -209,14 +212,14 @@ const PartDetailPage = () => {
         }
       );
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate itinerary');
-      }
-      
       const result = await response.json();
       
-      toast("Success", {
+      if (!response.ok) {
+        throw new Error(result.error || result.details?.message || 'Failed to generate itinerary');
+      }
+      
+      toast({
+        title: "Success",
         description: 'Itinerary generated successfully'
       });
       
@@ -225,8 +228,10 @@ const PartDetailPage = () => {
       
     } catch (error) {
       console.error('Error generating itinerary:', error);
-      toast("Error", {
-        description: error instanceof Error ? error.message : 'Failed to generate itinerary'
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Failed to generate itinerary',
+        variant: "destructive"
       });
     } finally {
       setGeneratingItinerary(false);

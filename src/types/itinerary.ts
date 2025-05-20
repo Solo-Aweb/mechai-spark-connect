@@ -8,6 +8,8 @@ export interface ItineraryStep {
   time: number;
   cost: number;
   unservable?: boolean;
+  machine_name?: string;
+  tool_name?: string;
 }
 
 export interface ItinerarySteps {

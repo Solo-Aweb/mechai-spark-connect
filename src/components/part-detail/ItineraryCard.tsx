@@ -1,9 +1,24 @@
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter
+} from "@/components/ui/card";
 import { formatDate } from "@/utils/formatters";
 import { ItineraryStep, Itinerary } from "@/types/itinerary";
 import { Loader2 } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface ItineraryCardProps {
   itinerary: Itinerary | null;
@@ -52,38 +67,38 @@ export const ItineraryCard = ({
       </CardHeader>
       <CardContent>
         <div className="border rounded-md overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Step</th>
-                <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Operation</th>
-                <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Machine</th>
-                <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Tool</th>
-                <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Time (min)</th>
-                <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Cost ($)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Step</TableHead>
+                <TableHead>Operation</TableHead>
+                <TableHead>Machine</TableHead>
+                <TableHead>Tool</TableHead>
+                <TableHead>Time (min)</TableHead>
+                <TableHead>Cost ($)</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {hasSteps() ? 
                 getSteps().map((step: ItineraryStep, index: number) => (
-                  <tr key={index} className={step.unservable ? "bg-red-50" : ""}>
-                    <td className="px-4 py-3 text-sm">{index + 1}</td>
-                    <td className="px-4 py-3 text-sm">{step.description || 'N/A'}</td>
-                    <td className="px-4 py-3 text-sm">{step.machine_id || 'N/A'}</td>
-                    <td className="px-4 py-3 text-sm">{step.tooling_id || 'N/A'}</td>
-                    <td className="px-4 py-3 text-sm">{step.time || 'N/A'}</td>
-                    <td className="px-4 py-3 text-sm">{step.cost ? `$${step.cost.toFixed(2)}` : 'N/A'}</td>
-                  </tr>
+                  <TableRow key={index} className={step.unservable ? "bg-red-50" : ""}>
+                    <TableCell>{index + 1}</TableCell>
+                    <TableCell>{step.description || 'N/A'}</TableCell>
+                    <TableCell>{step.machine_name || step.machine_id || 'N/A'}</TableCell>
+                    <TableCell>{step.tool_name || step.tooling_id || 'N/A'}</TableCell>
+                    <TableCell>{step.time || 'N/A'}</TableCell>
+                    <TableCell>{step.cost ? `$${step.cost.toFixed(2)}` : 'N/A'}</TableCell>
+                  </TableRow>
                 )) : (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-3 text-sm text-center text-gray-500">
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-gray-500">
                       No steps available in the itinerary data
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )
               }
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
         
         {itineraryError && (
@@ -102,6 +117,24 @@ export const ItineraryCard = ({
           </Alert>
         )}
       </CardContent>
+      <CardFooter>
+        <div className="w-full space-y-2 text-sm text-muted-foreground">
+          <h4 className="font-medium text-foreground">How costs are calculated:</h4>
+          <p>
+            Each machining step cost is based on the machine usage time and tool wear.
+            The formula typically includes:
+          </p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>Machine hourly rate × operation time</li>
+            <li>Tool wear cost per operation</li>
+            <li>Setup and material handling costs</li>
+          </ul>
+          <p>
+            Total cost is the sum of all individual step costs. Costs may vary based on 
+            machine availability and complexity of operations.
+          </p>
+        </div>
+      </CardFooter>
     </Card>
   );
 };

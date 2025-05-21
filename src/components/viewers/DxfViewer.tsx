@@ -22,6 +22,7 @@ export const DxfViewer = ({ filePath }: DxfViewerProps) => {
 
     const loadDxf = async () => {
       try {
+        // Download raw DXF file blob from Supabase Storage
         const { data: fileBlob, error: downloadError } = await supabase
           .storage
           .from('parts')
@@ -30,11 +31,13 @@ export const DxfViewer = ({ filePath }: DxfViewerProps) => {
           throw new Error(downloadError?.message || 'Failed to download DXF file');
         }
 
+        // Read blob as text and parse
         const dxfContent = await fileBlob.text();
         const parser = new DxfParser();
         const dxfData = parser.parse(dxfContent);
         console.log('DXF data parsed:', dxfData);
 
+        // Build SVG for rendering
         const svgNS = 'http://www.w3.org/2000/svg';
         const svgElement = document.createElementNS(svgNS, 'svg');
         svgElement.setAttribute('width', '100%');
@@ -154,13 +157,11 @@ export const DxfViewer = ({ filePath }: DxfViewerProps) => {
           <span className="ml-2">Loading DXF file...</span>
         </div>
       )}
-
       {error && (
         <div className="absolute inset-0 flex items-center justify-center z-10 bg-white bg-opacity-70">
           <p className="text-red-500">{error}</p>
         </div>
       )}
-
       <div ref={containerRef} className="w-full h-full" />
     </div>
   );

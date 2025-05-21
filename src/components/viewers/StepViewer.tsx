@@ -2,10 +2,10 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Loader2 } from 'lucide-react';
-import { OpenCascadeInstance } from '@/lib/openCascadeLoader';
+import { openCascadeInstance } from '@/lib/openCascadeLoader';
 
 interface StepViewerProps {
-  url: string; // ensure parent is passing `url` and not `filePath`
+  url: string;
 }
 
 export const StepViewer = ({ url }: StepViewerProps) => {
@@ -163,9 +163,9 @@ export const StepViewer = ({ url }: StepViewerProps) => {
           renderer.domElement.removeEventListener('wheel', handleWheel);
           
           renderer.dispose();
-          stepMesh.geometry.dispose();
+          mesh.geometry.dispose();
           material.dispose();
-          scene.children.slice().forEach(obj => scene.remove(obj));
+          scene.clear();
         };
 
       } catch (error) {

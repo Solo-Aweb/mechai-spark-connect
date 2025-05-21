@@ -1,0 +1,71 @@
+
+import { useState, useEffect } from 'react';
+import * as THREE from 'three';
+import OpenCascadeInstance from '@/lib/openCascadeLoader';
+
+export interface StepModelResult {
+  mesh: THREE.Mesh | null;
+  isLoading: boolean;
+  error: string | null;
+}
+
+export const useStepModel = (url: string): StepModelResult => {
+  const [mesh, setMesh] = useState<THREE.Mesh | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!url) {
+      setIsLoading(false);
+      return;
+    }
+
+    const loadStep = async () => {
+      try {
+        console.log('Loading STEP file from URL:', url);
+
+        // Fetch the STEP file
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch STEP file: ${response.statusText}`);
+        }
+        
+        const buffer = await response.arrayBuffer();
+        console.log('STEP file fetched, size:', buffer.byteLength);
+
+        // Load OpenCascade using our loader
+        const occ = await OpenCascadeInstance();
+        console.log('OpenCascade loaded', occ);
+
+        // Read the STEP file
+        const shape = occ.readSTEP(buffer);
+        console.log('STEP file parsed:', shape);
+
+        // Convert to Three.js mesh
+        const threeMesh = occ.toThreejsMesh(shape);
+        console.log('Converted to Three.js mesh:', threeMesh);
+        
+        // Create material and complete mesh
+        const material = new THREE.MeshPhongMaterial({
+          color: 0x3f88c5,
+          specular: 0x111111,
+          shininess: 200
+        });
+
+        // Create the final mesh with geometry from OpenCascade
+        const stepMesh = new THREE.Mesh(threeMesh.geometry, material);
+        setMesh(stepMesh);
+        setIsLoading(false);
+
+      } catch (error) {
+        console.error('Error loading STEP file:', error);
+        setError('Failed to load STEP model. See console for details.');
+        setIsLoading(false);
+      }
+    };
+
+    loadStep();
+  }, [url]);
+
+  return { mesh, isLoading, error };
+};

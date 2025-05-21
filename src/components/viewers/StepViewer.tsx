@@ -1,8 +1,7 @@
-
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Loader2 } from 'lucide-react';
-import { openCascadeInstance } from '@/lib/openCascadeLoader';
+import OpenCascadeInstance from '@/lib/openCascadeLoader';
 
 interface StepViewerProps {
   url: string;

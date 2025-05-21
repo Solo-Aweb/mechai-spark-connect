@@ -1,16 +1,5 @@
 
 declare module 'opencascade.js' {
-  export default function OpenCascadeInstance(): Promise<{
-    readSTEP: (buffer: ArrayBuffer) => any;
-    toThreejsMesh: (shape: any) => {
-      geometry: THREE.BufferGeometry;
-      mesh?: THREE.Mesh;
-    };
-  }>;
-}
-
-// Add support for the ?init suffix
-declare module 'opencascade.js?init' {
   export default function init(): Promise<{
     readSTEP: (buffer: ArrayBuffer) => any;
     toThreejsMesh: (shape: any) => {
@@ -27,3 +16,9 @@ declare module 'opencascade.js?init' {
     };
   }>;
 }
+
+// No longer needed with vite-plugin-wasm
+// declare module 'opencascade.js?init' {
+//   export default function init(): Promise<any>;
+//   export function init(): Promise<any>;
+// }

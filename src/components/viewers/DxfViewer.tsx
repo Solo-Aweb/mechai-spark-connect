@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import DxfParser from 'dxf-parser';
@@ -25,7 +26,7 @@ export const DxfViewer = ({ filePath }: DxfViewerProps) => {
         // Download raw DXF file blob from Supabase Storage
         const { data: fileBlob, error: downloadError } = await supabase
           .storage
-          .from('parts')
+          .from('parts')  // adjust bucket name if needed
           .download(filePath);
         if (downloadError || !fileBlob) {
           throw new Error(downloadError?.message || 'Failed to download DXF file');
@@ -66,7 +67,6 @@ export const DxfViewer = ({ filePath }: DxfViewerProps) => {
               });
               break;
             }
-
             case 'LWPOLYLINE':
             case 'POLYLINE': {
               const points = entity.vertices.map((v: any) => `${v.x},${v.y}`).join(' ');
@@ -84,7 +84,6 @@ export const DxfViewer = ({ filePath }: DxfViewerProps) => {
               });
               break;
             }
-
             case 'CIRCLE': {
               const { center, radius } = entity;
               const circle = document.createElementNS(svgNS, 'circle');
@@ -101,7 +100,6 @@ export const DxfViewer = ({ filePath }: DxfViewerProps) => {
               maxY = Math.max(maxY, center.y + radius);
               break;
             }
-
             case 'ARC': {
               const { center, radius, startAngle, endAngle } = entity;
               const startX = center.x + radius * Math.cos(startAngle);
@@ -122,17 +120,18 @@ export const DxfViewer = ({ filePath }: DxfViewerProps) => {
               maxY = Math.max(maxY, center.y + radius);
               break;
             }
-
             default:
+              // skip unsupported entity types
               break;
           }
         });
 
+        // Set viewBox to encompass content
         if (minX < maxX && minY < maxY) {
           const width = maxX - minX;
           const height = maxY - minY;
           const pad = Math.max(width, height) * 0.05;
-          svgElement.setAttribute('viewBox', `${minX - pad} ${minY - pad} ${width + pad * 2} ${height + pad * 2}`);
+          svgElement.setAttribute('viewBox', `${minX - pad} ${minY - pad} ${width + pad*2} ${height + pad*2}`);
         }
 
         const container = containerRef.current!;
@@ -166,5 +165,3 @@ export const DxfViewer = ({ filePath }: DxfViewerProps) => {
     </div>
   );
 };
-
-

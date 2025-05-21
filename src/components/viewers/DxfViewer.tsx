@@ -1,58 +1,43 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import DxfParser from 'dxf-parser';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client'; // ensure your Supabase client is configured
 
 interface DxfViewerProps {
   /**
-   * The URL of the DXF file to display
+   * Storage path of the DXF file in Supabase bucket, e.g. "parts/myPart.dxf"
    */
-  url: string;
+  filePath: string;
 }
 
-export const DxfViewer = ({ url }: DxfViewerProps) => {
+export const DxfViewer = ({ filePath }: DxfViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!containerRef.current || !url) return;
+    if (!containerRef.current || !filePath) return;
     setIsLoading(true);
     setError(null);
 
     const loadDxf = async () => {
       try {
-        // Extract bucket and path from URL
-        const urlPattern = /https:\/\/[^/]+\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/;
-        const match = url.match(urlPattern);
-        
-        if (!match || match.length < 3) {
-          throw new Error('Invalid Supabase storage URL format');
-        }
-        
-        const bucketName = match[1];
-        const filePath = match[2].split('?')[0]; // Remove query parameters if any
-        
-        // Download the file using Supabase Storage API
+        // Download raw DXF file blob from Supabase Storage
         const { data: fileBlob, error: downloadError } = await supabase
           .storage
-          .from(bucketName)
+          .from('parts')  // adjust bucket name if needed
           .download(filePath);
-          
         if (downloadError || !fileBlob) {
           throw new Error(downloadError?.message || 'Failed to download DXF file');
         }
 
-        // Read the blob as text
+        // Read blob as text and parse
         const dxfContent = await fileBlob.text();
-        
-        // Parse the DXF content
         const parser = new DxfParser();
         const dxfData = parser.parse(dxfContent);
         console.log('DXF data parsed:', dxfData);
 
-        // Build SVG
+        // Build SVG for rendering
         const svgNS = 'http://www.w3.org/2000/svg';
         const svgElement = document.createElementNS(svgNS, 'svg');
         svgElement.setAttribute('width', '100%');
@@ -81,7 +66,6 @@ export const DxfViewer = ({ url }: DxfViewerProps) => {
               });
               break;
             }
-
             case 'LWPOLYLINE':
             case 'POLYLINE': {
               const points = entity.vertices.map((v: any) => `${v.x},${v.y}`).join(' ');
@@ -99,7 +83,6 @@ export const DxfViewer = ({ url }: DxfViewerProps) => {
               });
               break;
             }
-
             case 'CIRCLE': {
               const { center, radius } = entity;
               const circle = document.createElementNS(svgNS, 'circle');
@@ -116,7 +99,6 @@ export const DxfViewer = ({ url }: DxfViewerProps) => {
               maxY = Math.max(maxY, center.y + radius);
               break;
             }
-
             case 'ARC': {
               const { center, radius, startAngle, endAngle } = entity;
               const startX = center.x + radius * Math.cos(startAngle);
@@ -137,20 +119,19 @@ export const DxfViewer = ({ url }: DxfViewerProps) => {
               maxY = Math.max(maxY, center.y + radius);
               break;
             }
-
             default:
               // skip unsupported entity types
           }
         });
 
+        // Set viewBox to encompass content
         if (minX < maxX && minY < maxY) {
           const width = maxX - minX;
           const height = maxY - minY;
           const pad = Math.max(width, height) * 0.05;
-          svgElement.setAttribute('viewBox', `${minX - pad} ${minY - pad} ${width + pad * 2} ${height + pad * 2}`);
+          svgElement.setAttribute('viewBox', `${minX - pad} ${minY - pad} ${width + pad*2} ${height + pad*2}`);
         }
 
-        // Clear container before appending
         const container = containerRef.current!;
         container.innerHTML = '';
         container.appendChild(svgElement);
@@ -163,7 +144,7 @@ export const DxfViewer = ({ url }: DxfViewerProps) => {
     };
 
     loadDxf();
-  }, [url]);
+  }, [filePath]);
 
   return (
     <div className="w-full h-full relative">
@@ -173,14 +154,14 @@ export const DxfViewer = ({ url }: DxfViewerProps) => {
           <span className="ml-2">Loading DXF file...</span>
         </div>
       )}
-
       {error && (
         <div className="absolute inset-0 flex items-center justify-center z-10 bg-white bg-opacity-70">
           <p className="text-red-500">{error}</p>
         </div>
       )}
-
       <div ref={containerRef} className="w-full h-full" />
     </div>
   );
 };
+```
+

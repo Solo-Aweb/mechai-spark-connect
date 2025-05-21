@@ -11,7 +11,7 @@ interface DxfViewerProps {
   filePath: string;
 }
 
-export const DxfViewer = ({ filePath }: DxfViewerProps) => { … }
+export const DxfViewer = ({ filePath }: DxfViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

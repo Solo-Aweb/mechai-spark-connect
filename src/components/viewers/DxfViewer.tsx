@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import DxfParser from 'dxf-parser';
-import { supabase } from '@/integrations/supabase/client'; // ensure your Supabase client is configured
+import { supabase } from '@/integrations/supabase/client';
 
 interface DxfViewerProps {
   /**
@@ -22,22 +22,19 @@ export const DxfViewer = ({ filePath }: DxfViewerProps) => {
 
     const loadDxf = async () => {
       try {
-        // Download raw DXF file blob from Supabase Storage
         const { data: fileBlob, error: downloadError } = await supabase
           .storage
-          .from('parts')  // adjust bucket name if needed
+          .from('parts')
           .download(filePath);
         if (downloadError || !fileBlob) {
           throw new Error(downloadError?.message || 'Failed to download DXF file');
         }
 
-        // Read blob as text and parse
         const dxfContent = await fileBlob.text();
         const parser = new DxfParser();
         const dxfData = parser.parse(dxfContent);
         console.log('DXF data parsed:', dxfData);
 
-        // Build SVG for rendering
         const svgNS = 'http://www.w3.org/2000/svg';
         const svgElement = document.createElementNS(svgNS, 'svg');
         svgElement.setAttribute('width', '100%');
@@ -66,6 +63,7 @@ export const DxfViewer = ({ filePath }: DxfViewerProps) => {
               });
               break;
             }
+
             case 'LWPOLYLINE':
             case 'POLYLINE': {
               const points = entity.vertices.map((v: any) => `${v.x},${v.y}`).join(' ');
@@ -83,6 +81,7 @@ export const DxfViewer = ({ filePath }: DxfViewerProps) => {
               });
               break;
             }
+
             case 'CIRCLE': {
               const { center, radius } = entity;
               const circle = document.createElementNS(svgNS, 'circle');
@@ -99,6 +98,7 @@ export const DxfViewer = ({ filePath }: DxfViewerProps) => {
               maxY = Math.max(maxY, center.y + radius);
               break;
             }
+
             case 'ARC': {
               const { center, radius, startAngle, endAngle } = entity;
               const startX = center.x + radius * Math.cos(startAngle);
@@ -119,17 +119,17 @@ export const DxfViewer = ({ filePath }: DxfViewerProps) => {
               maxY = Math.max(maxY, center.y + radius);
               break;
             }
+
             default:
-              // skip unsupported entity types
+              break;
           }
         });
 
-        // Set viewBox to encompass content
         if (minX < maxX && minY < maxY) {
           const width = maxX - minX;
           const height = maxY - minY;
           const pad = Math.max(width, height) * 0.05;
-          svgElement.setAttribute('viewBox', `${minX - pad} ${minY - pad} ${width + pad*2} ${height + pad*2}`);
+          svgElement.setAttribute('viewBox', `${minX - pad} ${minY - pad} ${width + pad * 2} ${height + pad * 2}`);
         }
 
         const container = containerRef.current!;
@@ -154,14 +154,16 @@ export const DxfViewer = ({ filePath }: DxfViewerProps) => {
           <span className="ml-2">Loading DXF file...</span>
         </div>
       )}
+
       {error && (
         <div className="absolute inset-0 flex items-center justify-center z-10 bg-white bg-opacity-70">
           <p className="text-red-500">{error}</p>
         </div>
       )}
+
       <div ref={containerRef} className="w-full h-full" />
     </div>
   );
 };
-```
+
 

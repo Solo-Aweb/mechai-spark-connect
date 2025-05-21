@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import DxfParser from 'dxf-parser';
@@ -22,11 +23,12 @@ export const DxfViewer = ({ filePath }: DxfViewerProps) => {
 
     const loadDxf = async () => {
       try {
-        // Download raw DXF file blob from Supabase Storage
+        // Download raw DXF file blob directly from Supabase Storage using the filePath
         const { data: fileBlob, error: downloadError } = await supabase
           .storage
           .from('parts')  // adjust bucket name if needed
           .download(filePath);
+          
         if (downloadError || !fileBlob) {
           throw new Error(downloadError?.message || 'Failed to download DXF file');
         }

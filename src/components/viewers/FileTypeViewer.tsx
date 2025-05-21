@@ -16,10 +16,10 @@ export const FileTypeViewer = ({ url, fileType }: FileTypeViewerProps) => {
 
   // Extract file path from URL for DXF files
   const extractFilePath = (url: string): string => {
-    // This is a simplistic approach - you might need a more robust method
-    // to extract the correct path depending on your URL structure
-    const matches = url.match(/\/([^/?#]+)(?:[?#]|$)/);
-    return matches && matches[1] ? matches[1] : url;
+    const urlObj = new URL(url);
+    const pathParts = urlObj.pathname.split('/');
+    // Get the last segment of the path which should be the filename
+    return pathParts[pathParts.length - 1];
   };
 
   switch (normalizedType) {

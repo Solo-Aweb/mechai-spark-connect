@@ -45,8 +45,11 @@ export type Database = {
         Row: {
           axes: number
           created_at: string
+          hourly_rate: number | null
           id: string
           name: string
+          operating_cost: number | null
+          setup_cost: number | null
           spindle_rpm: number
           type: string
           x_range: number
@@ -56,8 +59,11 @@ export type Database = {
         Insert: {
           axes: number
           created_at?: string
+          hourly_rate?: number | null
           id?: string
           name: string
+          operating_cost?: number | null
+          setup_cost?: number | null
           spindle_rpm: number
           type: string
           x_range: number
@@ -67,8 +73,11 @@ export type Database = {
         Update: {
           axes?: number
           created_at?: string
+          hourly_rate?: number | null
           id?: string
           name?: string
+          operating_cost?: number | null
+          setup_cost?: number | null
           spindle_rpm?: number
           type?: string
           x_range?: number
@@ -136,6 +145,7 @@ export type Database = {
       }
       tooling: {
         Row: {
+          cost: number | null
           created_at: string
           diameter: number
           id: string
@@ -143,9 +153,11 @@ export type Database = {
           life_remaining: number
           machine_id: string
           material: string
+          replacement_cost: number | null
           tool_name: string
         }
         Insert: {
+          cost?: number | null
           created_at?: string
           diameter: number
           id?: string
@@ -153,9 +165,11 @@ export type Database = {
           life_remaining: number
           machine_id: string
           material: string
+          replacement_cost?: number | null
           tool_name: string
         }
         Update: {
+          cost?: number | null
           created_at?: string
           diameter?: number
           id?: string
@@ -163,6 +177,7 @@ export type Database = {
           life_remaining?: number
           machine_id?: string
           material?: string
+          replacement_cost?: number | null
           tool_name?: string
         }
         Relationships: [

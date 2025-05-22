@@ -36,6 +36,7 @@ export default defineConfig(({ mode }) => ({
     sourcemap: true, // Enable sourcemaps for debugging
     rollupOptions: {
       external: [
+        /\.wasm$/,
         /opencascade\.wasm\.wasm$/
       ],
       output: {

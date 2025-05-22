@@ -6,32 +6,38 @@ export default async function OpenCascadeInstance() {
   try {
     console.log('Attempting to load OpenCascade.js WebAssembly module...');
     
-    // Try to load via direct path first (production build)
+    // Try different import approaches
     try {
-      const directModule = await import('/node_modules/opencascade.js/dist/opencascade.wasm.js');
-      console.log('OpenCascade module loaded via direct path');
-      
-      const oc = await (typeof directModule.default === 'function' 
-        ? directModule.default() 
-        : directModule.init());
-        
-      console.log('OpenCascade.js initialized successfully');
-      return oc;
-    } catch (directImportError) {
-      console.log('Direct import failed, falling back to module import', directImportError);
-      
-      // Fall back to regular import
+      // Use a relative path for imports - this works better with TypeScript
+      console.log('Loading OpenCascade via package import');
       const opencascadeModule = await import('opencascade.js');
-      console.log('OpenCascade module loaded via module import');
       
       const oc = await (typeof opencascadeModule.default === 'function' 
         ? opencascadeModule.default() 
         : opencascadeModule.init());
         
-      console.log('OpenCascade.js initialized successfully');
+      console.log('OpenCascade.js initialized successfully via package import');
+      return oc;
+    } catch (firstError) {
+      console.log('First import attempt failed, trying alternative method', firstError);
+      
+      // Use a dynamic import with a constructed URL
+      // This bypasses TypeScript's static analysis while still allowing runtime loading
+      const modulePath = 'opencascade.js/dist/opencascade.wasm.js';
+      console.log('Attempting dynamic import with: ', modulePath);
+      
+      // Using Function constructor to bypass TypeScript's static analysis
+      // This is a workaround for the TypeScript error
+      const importModule = new Function('modulePath', 'return import(modulePath)');
+      const directModule = await importModule(modulePath);
+      
+      const oc = await (typeof directModule.default === 'function' 
+        ? directModule.default() 
+        : directModule.init());
+        
+      console.log('OpenCascade.js initialized successfully via dynamic import');
       return oc;
     }
-    
   } catch (error) {
     console.error('Error loading OpenCascade.js:', error);
     toast.error('Failed to load 3D model viewer');

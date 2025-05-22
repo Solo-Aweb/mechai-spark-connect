@@ -1,6 +1,6 @@
 
 import { useRef } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { useStepModel } from '@/hooks/useStepModel';
 import { ThreeRenderer } from './ThreeRenderer';
 
@@ -22,18 +22,26 @@ export const StepViewer = ({ url }: StepViewerProps) => {
       )}
       
       {error && (
-        <div className="absolute inset-0 flex items-center justify-center z-10 bg-white bg-opacity-70">
-          <p className="text-red-500">{error}</p>
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-white bg-opacity-80 p-4">
+          <AlertCircle className="h-8 w-8 text-red-500 mb-2" />
+          <p className="text-red-500 text-center font-medium">{error}</p>
+          <p className="text-gray-500 text-sm mt-2 text-center">
+            Check that the STEP file is valid and compatible with the viewer.
+          </p>
         </div>
       )}
       
-      {mesh && !isLoading && <ThreeRenderer mesh={mesh} />}
+      {mesh && !isLoading && (
+        <ThreeRenderer mesh={mesh} />
+      )}
       
       {!mesh && !isLoading && !error && (
         <div className="flex items-center justify-center h-full bg-gray-50">
           <p className="text-gray-400">No model available to display</p>
         </div>
       )}
+      
+      <div ref={containerRef} className="absolute inset-0" />
     </div>
   );
 };

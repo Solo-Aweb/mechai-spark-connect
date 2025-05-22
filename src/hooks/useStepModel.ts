@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import * as THREE from 'three';
 import OpenCascadeInstance from '@/lib/openCascadeLoader';
+import { toast } from 'sonner';
 
 export interface StepModelResult {
   mesh: THREE.Mesh | null;
@@ -20,6 +21,7 @@ export const useStepModel = (url: string): StepModelResult => {
       return;
     }
 
+    let mounted = true;
     const loadStep = async () => {
       try {
         console.log('Loading STEP file from URL:', url);
@@ -35,7 +37,9 @@ export const useStepModel = (url: string): StepModelResult => {
 
         // Load OpenCascade using our loader
         const occ = await OpenCascadeInstance();
-        console.log('OpenCascade loaded', occ);
+        console.log('OpenCascade loaded successfully:', occ);
+
+        if (!mounted) return;
 
         // Read the STEP file
         const shape = occ.readSTEP(buffer);
@@ -54,17 +58,27 @@ export const useStepModel = (url: string): StepModelResult => {
 
         // Create the final mesh with geometry from OpenCascade
         const stepMesh = new THREE.Mesh(threeMesh.geometry, material);
-        setMesh(stepMesh);
-        setIsLoading(false);
+        if (mounted) {
+          setMesh(stepMesh);
+          setIsLoading(false);
+        }
 
       } catch (error) {
         console.error('Error loading STEP file:', error);
-        setError('Failed to load STEP model. See console for details.');
-        setIsLoading(false);
+        if (mounted) {
+          setError('Failed to load STEP model. See console for details.');
+          setIsLoading(false);
+          toast.error('Failed to load STEP model');
+        }
       }
     };
 
     loadStep();
+    
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      mounted = false;
+    };
   }, [url]);
 
   return { mesh, isLoading, error };

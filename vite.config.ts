@@ -5,7 +5,6 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import wasm from "vite-plugin-wasm";
 import topLevelAwait from "vite-plugin-top-level-await";
-import fs from 'fs';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -27,6 +26,7 @@ export default defineConfig(({ mode }) => ({
     preserveSymlinks: true,
   },
   optimizeDeps: {
+    // Tell Vite to skip trying to optimize opencascade.js
     exclude: ['opencascade.js'],
   },
   build: {
@@ -34,8 +34,15 @@ export default defineConfig(({ mode }) => ({
     assetsInlineLimit: 0, // Don't inline WebAssembly files
     sourcemap: true, // Enable sourcemaps for debugging
     rollupOptions: {
-      // Explicitly mark wasm files as external to prevent Rollup from trying to bundle them
-      external: [/\.wasm$/],
+      // Mark opencascade imports as external during build
+      external: [
+        /^opencascade\.js/,
+        /\.wasm$/
+      ],
+      output: {
+        // Prevent mangling of WASM import names
+        manualChunks: {},
+      },
     },
   },
 }));

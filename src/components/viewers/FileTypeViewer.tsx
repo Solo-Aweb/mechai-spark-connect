@@ -1,5 +1,4 @@
 
-
 import { StepViewer } from './StepViewer';
 import { StlViewer } from './StlViewer';
 import { DxfViewer } from './DxfViewer';
@@ -17,10 +16,16 @@ export const FileTypeViewer = ({ url, fileType }: FileTypeViewerProps) => {
 
   // Extract file path from URL for DXF files
   const extractFilePath = (url: string): string => {
-    const urlObj = new URL(url);
-    const pathParts = urlObj.pathname.split('/');
-    // Get the last segment of the path which should be the filename
-    return pathParts[pathParts.length - 1];
+    try {
+      const urlObj = new URL(url);
+      const pathParts = urlObj.pathname.split('/');
+      // Get the last segment of the path which should be the filename
+      return pathParts[pathParts.length - 1];
+    } catch (error) {
+      console.error('Error extracting file path:', error);
+      // If URL parsing fails, just return the original URL
+      return url;
+    }
   };
 
   switch (normalizedType) {

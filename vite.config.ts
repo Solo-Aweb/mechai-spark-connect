@@ -47,4 +47,16 @@ export default defineConfig(({ mode }) => ({
       }
     }
   },
+  // Make sure all WebAssembly assets are properly copied to the output directory
+  publicDir: 'public',
+  // Tell Vite to rewrite import paths for WebAssembly in production
+  experimental: {
+    renderBuiltUrl(filename, { hostType }) {
+      if (filename.includes('.wasm')) {
+        // Force absolute paths for wasm files
+        return { relative: true, hostId: 'public' };
+      }
+      return filename;
+    }
+  }
 }));

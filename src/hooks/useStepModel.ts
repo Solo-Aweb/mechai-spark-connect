@@ -37,6 +37,7 @@ export const useStepModel = (url: string): StepModelResult => {
 
         // Try to load OpenCascade with improved error handling
         try {
+          console.log('Initializing OpenCascade...');
           // Load OpenCascade using our loader
           const occ = await OpenCascadeInstance();
           console.log('OpenCascade loaded successfully');
@@ -44,10 +45,12 @@ export const useStepModel = (url: string): StepModelResult => {
           if (!mounted) return;
 
           // Read the STEP file
+          console.log('Reading STEP file with OpenCascade...');
           const shape = occ.readSTEP(buffer);
           console.log('STEP file parsed successfully');
 
           // Convert to Three.js mesh
+          console.log('Converting to Three.js mesh...');
           const threeMesh = occ.toThreejsMesh(shape);
           console.log('Converted to Three.js mesh');
           
@@ -68,7 +71,14 @@ export const useStepModel = (url: string): StepModelResult => {
         } catch (occError) {
           console.error('Error initializing OpenCascade:', occError);
           if (mounted) {
-            setError(`Failed to initialize 3D model viewer: ${occError instanceof Error ? occError.message : String(occError)}`);
+            // Provide more descriptive error message for WebAssembly issues
+            let errorMessage = occError instanceof Error ? occError.message : String(occError);
+            
+            if (errorMessage.includes('dynamically imported module') || errorMessage.includes('Failed to fetch')) {
+              errorMessage = 'Failed to load WebAssembly module. This might be due to CORS restrictions or network issues.';
+            }
+            
+            setError(`Failed to initialize 3D model viewer: ${errorMessage}`);
             setIsLoading(false);
             toast.error('Failed to initialize 3D model viewer');
           }

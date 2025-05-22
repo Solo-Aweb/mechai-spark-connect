@@ -6,9 +6,8 @@ export default async function OpenCascadeInstance() {
   try {
     console.log('Attempting to load OpenCascade.js WebAssembly module...');
     
-    // Try different import approaches
+    // First attempt: Standard package import
     try {
-      // Use a relative path for imports - this works better with TypeScript
       console.log('Loading OpenCascade via package import');
       const opencascadeModule = await import('opencascade.js');
       
@@ -19,36 +18,42 @@ export default async function OpenCascadeInstance() {
       console.log('OpenCascade.js initialized successfully via package import');
       return oc;
     } catch (firstError) {
-      console.log('First import attempt failed, trying alternative method', firstError);
+      console.log('First import attempt failed:', firstError);
       
-      // Use dynamic import with proper relative path - this is essential for TypeScript
-      // Starting with "./" makes it a proper relative import rather than a bare specifier
-      const modulePath = './node_modules/opencascade.js/dist/opencascade.wasm.js';
-      console.log('Attempting dynamic import with proper path: ', modulePath);
-      
+      // Second attempt: Try with relative path
       try {
-        const directModule = await import(/* @vite-ignore */ modulePath);
+        console.log('Trying with relative path');
+        // Use vite's special syntax for dynamic imports
+        const directModule = await import(/* @vite-ignore */ './node_modules/opencascade.js/dist/opencascade.wasm.js');
         
         const oc = await (typeof directModule.default === 'function' 
           ? directModule.default() 
           : directModule.init());
           
-        console.log('OpenCascade.js initialized successfully via dynamic import');
+        console.log('OpenCascade.js initialized successfully via relative path');
         return oc;
-      } catch (dynamicImportError) {
-        console.error('Dynamic import failed:', dynamicImportError);
+      } catch (secondError) {
+        console.log('Second import attempt failed:', secondError);
         
-        // Last resort - try with absolute path
-        const absolutePath = '/node_modules/opencascade.js/dist/opencascade.wasm.js';
-        console.log('Attempting with absolute path:', absolutePath);
-        
-        const lastResortModule = await import(/* @vite-ignore */ absolutePath);
-        const oc = await (typeof lastResortModule.default === 'function' 
-          ? lastResortModule.default() 
-          : lastResortModule.init());
+        // Third attempt: Try with document base URL for production
+        try {
+          // Get the base URL of the current document
+          const baseUrl = document.baseURI.split('/').slice(0, -1).join('/');
+          const wasmPath = `${baseUrl}/node_modules/opencascade.js/dist/opencascade.wasm.js`;
           
-        console.log('OpenCascade.js initialized successfully via absolute path');
-        return oc;
+          console.log('Trying with base URL path:', wasmPath);
+          const baseUrlModule = await import(/* @vite-ignore */ wasmPath);
+          
+          const oc = await (typeof baseUrlModule.default === 'function' 
+            ? baseUrlModule.default() 
+            : baseUrlModule.init());
+            
+          console.log('OpenCascade.js initialized successfully via base URL path');
+          return oc;
+        } catch (thirdError) {
+          console.log('Third import attempt failed:', thirdError);
+          throw new Error(`Failed to load OpenCascade.js module: ${thirdError.message}`);
+        }
       }
     }
   } catch (error) {

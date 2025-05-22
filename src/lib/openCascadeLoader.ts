@@ -6,25 +6,24 @@ export default async function OpenCascadeInstance() {
   try {
     console.log('Attempting to load OpenCascade.js WebAssembly module...');
     
-    // Use a direct import path to the node_modules package
-    // This avoids the bare specifier issue
-    const modulePath = '/node_modules/opencascade.js/dist/opencascade.wasm.js';
-    console.log('Loading OpenCascade from path:', modulePath);
+    // Use dynamic import with a full path - this is the crucial change
+    const oc = await import('/node_modules/opencascade.js/dist/opencascade.wasm.js')
+      .then(module => {
+        console.log('OpenCascade module loaded successfully');
+        
+        // Initialize the module based on its export pattern
+        if (typeof module.default === 'function') {
+          return module.default();
+        } else if (typeof module.init === 'function') {
+          return module.init();
+        } else {
+          throw new Error('Invalid OpenCascade.js module structure');
+        }
+      });
     
-    const module = await import(/* @vite-ignore */ modulePath);
-    console.log('OpenCascade module loaded:', module);
+    console.log('OpenCascade.js initialized:', oc);
+    return oc;
     
-    if (module.default && typeof module.default === 'function') {
-      console.log('Initializing OpenCascade.js via default export...');
-      return module.default();
-    } else if (module.init && typeof module.init === 'function') {
-      console.log('Initializing OpenCascade.js via init function...');
-      return module.init();
-    } else {
-      console.error('Unexpected module structure:', module);
-      toast.error('Failed to initialize 3D viewer');
-      throw new Error('Failed to initialize OpenCascade: Invalid module structure');
-    }
   } catch (error) {
     console.error('Error loading OpenCascade.js:', error);
     toast.error('Failed to load 3D model viewer');

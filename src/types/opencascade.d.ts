@@ -15,8 +15,10 @@ declare module 'opencascade.js' {
   export default function init(): Promise<OpenCascadeInstance>;
 }
 
-// Also allow direct import from the path
+// Allow wildcard imports for OpenCascade module
 declare module '*/opencascade.wasm.js' {
-  export * from 'opencascade.js';
-  export { default } from 'opencascade.js';
+  import { OpenCascadeInstance } from 'opencascade.js';
+  
+  export function init(): Promise<OpenCascadeInstance>;
+  export default function (): Promise<OpenCascadeInstance>;
 }

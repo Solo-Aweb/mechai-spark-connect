@@ -37,17 +37,17 @@ export const useStepModel = (url: string): StepModelResult => {
 
         // Load OpenCascade using our loader
         const occ = await OpenCascadeInstance();
-        console.log('OpenCascade loaded successfully:', occ);
+        console.log('OpenCascade loaded successfully');
 
         if (!mounted) return;
 
         // Read the STEP file
         const shape = occ.readSTEP(buffer);
-        console.log('STEP file parsed:', shape);
+        console.log('STEP file parsed successfully');
 
         // Convert to Three.js mesh
         const threeMesh = occ.toThreejsMesh(shape);
-        console.log('Converted to Three.js mesh:', threeMesh);
+        console.log('Converted to Three.js mesh');
         
         // Create material and complete mesh
         const material = new THREE.MeshPhongMaterial({

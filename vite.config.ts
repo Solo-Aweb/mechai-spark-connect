@@ -22,11 +22,11 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "opencascade.js": path.resolve(__dirname, "node_modules/opencascade.js"),
     },
     preserveSymlinks: true,
   },
   optimizeDeps: {
-    // Exclude OpenCascade from optimization to prevent import issues
     exclude: ['opencascade.js'],
     include: ['three'],
   },

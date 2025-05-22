@@ -6,22 +6,17 @@ export default async function OpenCascadeInstance() {
   try {
     console.log('Attempting to load OpenCascade.js WebAssembly module...');
     
-    // Use dynamic import with a full path - this is the crucial change
-    const oc = await import('/node_modules/opencascade.js/dist/opencascade.wasm.js')
-      .then(module => {
-        console.log('OpenCascade module loaded successfully');
-        
-        // Initialize the module based on its export pattern
-        if (typeof module.default === 'function') {
-          return module.default();
-        } else if (typeof module.init === 'function') {
-          return module.init();
-        } else {
-          throw new Error('Invalid OpenCascade.js module structure');
-        }
-      });
+    // Import the OpenCascade.js module using a relative path
+    // This works better with bundlers and in production
+    const opencascadeModule = await import('opencascade.js');
+    console.log('OpenCascade module loaded successfully:', opencascadeModule);
     
-    console.log('OpenCascade.js initialized:', oc);
+    // Initialize the module
+    const oc = await (typeof opencascadeModule.default === 'function' 
+      ? opencascadeModule.default() 
+      : opencascadeModule.init());
+      
+    console.log('OpenCascade.js initialized successfully');
     return oc;
     
   } catch (error) {

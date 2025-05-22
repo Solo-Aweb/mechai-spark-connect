@@ -22,6 +22,8 @@ export const StepViewer = ({ url }: StepViewerProps) => {
       return "Failed to load WebAssembly module. This browser may not support WebAssembly or the module failed to download.";
     } else if (errorString.includes('MIME type')) {
       return "Server configuration issue: WebAssembly module has incorrect MIME type.";
+    } else if (errorString.includes('opencascade.wasm.wasm')) {
+      return "Failed to load WebAssembly dependencies. This is likely a build configuration issue.";
     } else {
       return typeof error === 'object' ? JSON.stringify(error) : String(error);
     }

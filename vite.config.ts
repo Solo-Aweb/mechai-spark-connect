@@ -35,6 +35,9 @@ export default defineConfig(({ mode }) => ({
     assetsInlineLimit: 0, // Don't inline WebAssembly files
     sourcemap: true, // Enable sourcemaps for debugging
     rollupOptions: {
+      external: [
+        /opencascade\.wasm\.wasm$/
+      ],
       output: {
         manualChunks: {
           'three': ['three']

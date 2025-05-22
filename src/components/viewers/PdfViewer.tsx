@@ -1,10 +1,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
-import * as pdfjsLib from 'pdfjs-dist';
 import { Button } from '@/components/ui/button';
+import * as pdfjsLib from 'pdfjs-dist';
 
-// Set worker path for PDF.js
+// Explicitly set worker path for PDF.js
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 interface PdfViewerProps {
@@ -32,6 +32,11 @@ export const PdfViewer = ({ url }: PdfViewerProps) => {
     setIsLoading(true);
     setError(null);
 
+    // Clean up any previous document
+    if (pdfDocument) {
+      pdfDocument.destroy();
+    }
+
     const loadPdfDocument = async () => {
       try {
         const loadingTask = pdfjsLib.getDocument(url);
@@ -58,7 +63,7 @@ export const PdfViewer = ({ url }: PdfViewerProps) => {
     };
   }, [url]);
 
-  // Render current page whenever it changes or when the document/container changes
+  // Render current page whenever it changes or when the document/scale changes
   useEffect(() => {
     const renderPage = async () => {
       if (!pdfDocument || !canvasRef.current || !containerRef.current) return;
@@ -69,13 +74,20 @@ export const PdfViewer = ({ url }: PdfViewerProps) => {
         
         // Get the container width for responsive sizing
         const containerWidth = containerRef.current.clientWidth;
+        const containerHeight = containerRef.current.clientHeight;
         
         // Get the original viewport dimensions
-        const viewport = page.getViewport({ scale: 1 });
+        const originalViewport = page.getViewport({ scale: 1 });
         
-        // Calculate scale to fit width
-        const calculatedScale = containerWidth / viewport.width;
-        const adjustedScale = scale * calculatedScale;
+        // Calculate scale to fit width with some padding
+        const widthScale = (containerWidth - 40) / originalViewport.width;
+        const heightScale = (containerHeight - 40) / originalViewport.height;
+        
+        // Choose the smaller scale to ensure PDF fits in container
+        const fitScale = Math.min(widthScale, heightScale, 1);
+        
+        // Apply user-defined zoom on top of fit scale
+        const adjustedScale = scale * fitScale;
         
         // Create viewport with adjusted scale
         const scaledViewport = page.getViewport({ scale: adjustedScale });
@@ -90,9 +102,11 @@ export const PdfViewer = ({ url }: PdfViewerProps) => {
           return;
         }
         
+        // Set explicit dimensions on the canvas
         canvas.width = scaledViewport.width;
         canvas.height = scaledViewport.height;
-        canvas.style.display = 'block';
+        canvas.style.width = `${scaledViewport.width}px`;
+        canvas.style.height = `${scaledViewport.height}px`;
         
         // Render PDF page to canvas
         const renderContext = {
@@ -110,14 +124,14 @@ export const PdfViewer = ({ url }: PdfViewerProps) => {
     };
 
     renderPage();
-  }, [pdfDocument, currentPage, containerRef, scale]);
+  }, [pdfDocument, currentPage, scale]);
 
   // Handle window resize
   useEffect(() => {
     const handleResize = () => {
-      if (containerRef.current && pdfDocument) {
-        // Trigger re-render by setting a small change to scale
-        setScale(prev => prev + 0.001);
+      if (pdfDocument) {
+        // Force re-render when container resizes
+        setScale(prevScale => prevScale);
       }
     };
 
@@ -125,6 +139,7 @@ export const PdfViewer = ({ url }: PdfViewerProps) => {
     return () => window.removeEventListener('resize', handleResize);
   }, [pdfDocument]);
 
+  // Navigation handlers
   const goToPreviousPage = () => {
     if (currentPage > 1) {
       setCurrentPage(currentPage - 1);
@@ -137,6 +152,7 @@ export const PdfViewer = ({ url }: PdfViewerProps) => {
     }
   };
 
+  // Zoom handlers
   const zoomIn = () => {
     setScale(prev => Math.min(prev + 0.25, 3));
   };
@@ -205,7 +221,6 @@ export const PdfViewer = ({ url }: PdfViewerProps) => {
           <canvas 
             ref={canvasRef} 
             className="mx-auto shadow-lg" 
-            style={{ display: !isLoading && !error ? 'block' : 'none' }}
           />
         </div>
       </div>

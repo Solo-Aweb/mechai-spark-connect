@@ -46,6 +46,10 @@ export const ItineraryCard = ({
     return steps.length > 0;
   };
 
+  const countUnservableSteps = () => {
+    return getSteps().filter(step => step.unservable).length;
+  };
+
   if (loadingItinerary) {
     return (
       <Card>
@@ -66,7 +70,12 @@ export const ItineraryCard = ({
         <CardTitle>Machining Itinerary</CardTitle>
         <CardDescription>
           Generated on {formatDate(itinerary.created_at)} • 
-          Total Cost: {formatCurrency(itinerary.total_cost)}
+          Total Cost: {formatCurrency(itinerary.total_cost)} •
+          {countUnservableSteps() > 0 && (
+            <span className="text-red-500 ml-1">
+              {countUnservableSteps()} step{countUnservableSteps() !== 1 ? 's' : ''} require additional equipment
+            </span>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -153,10 +162,10 @@ export const ItineraryCard = ({
           </Alert>
         )}
 
-        {getSteps().some((step: ItineraryStep) => step.unservable) && (
+        {countUnservableSteps() > 0 && (
           <Alert className="mt-4" variant="destructive">
             <AlertDescription>
-              Some operations cannot be serviced with the available machines and tooling.
+              {countUnservableSteps()} machining step{countUnservableSteps() !== 1 ? 's' : ''} cannot be serviced with the available machines and tooling.
               Review the recommendations in the table for purchasing suggestions.
             </AlertDescription>
           </Alert>

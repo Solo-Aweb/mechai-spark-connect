@@ -139,7 +139,7 @@ serve(async (req) => {
     // Prepare prompt for OpenAI based on available data
     let prompt;
     if (svgContent) {
-      prompt = `Given these 2D vectors ${JSON.stringify(svgContent)}, analyze and identify the required machining operations. For each operation, determine if we have a suitable machine and tool from our available equipment:
+      prompt = `Given these 2D vectors ${JSON.stringify(svgContent)}, analyze and identify ALL required machining operations. For each operation, determine if we have a suitable machine and tool from our available equipment:
 
 AVAILABLE MACHINES:
 ${JSON.stringify(machines)}
@@ -158,6 +158,9 @@ For each machining step:
    a. Mark the step as unservable
    b. Specify what type of machine would be required (e.g., "requires CNC mill")
    c. Provide a recommendation on what to purchase
+
+IMPORTANT: Include ALL necessary steps, even if we don't have the equipment to perform them.
+For steps that cannot be performed with our inventory, provide detailed recommendations about what machine type and/or tool would be needed.
 
 Return ONLY valid JSON with a "steps" array of objects, where each object has:
 - "description": detailed description of the machining step
@@ -169,7 +172,7 @@ Return ONLY valid JSON with a "steps" array of objects, where each object has:
 - "required_machine_type": machine type needed if unavailable
 - "recommendation": purchase recommendation if needed`;
     } else {
-      prompt = `Given part with URL ${part.file_url || 'No file URL available'}, plan a sequence of machining steps. For each step, determine if we have a suitable machine and tool from our equipment:
+      prompt = `Given part with URL ${part.file_url || 'No file URL available'}, plan a sequence of ALL necessary machining steps. For each step, determine if we have a suitable machine and tool from our equipment:
 
 AVAILABLE MACHINES:
 ${JSON.stringify(machines)}
@@ -188,6 +191,9 @@ For each machining step:
    a. Mark the step as unservable
    b. Specify what type of machine would be required (e.g., "requires CNC mill")
    c. Provide a recommendation on what to purchase
+
+IMPORTANT: Include ALL necessary steps, even if we don't have the equipment to perform them.
+For steps that cannot be performed with our inventory, provide detailed recommendations about what machine type and/or tool would be needed.
 
 Return ONLY valid JSON with a "steps" array of objects, where each object has:
 - "description": detailed description of the machining step

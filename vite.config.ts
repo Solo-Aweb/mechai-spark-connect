@@ -5,6 +5,41 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import wasm from "vite-plugin-wasm";
 import topLevelAwait from "vite-plugin-top-level-await";
+import fs from 'fs';
+import { exec } from 'child_process';
+
+// Copy OpenCascade WASM files to public directory during build
+const copyOpenCascadeFiles = () => {
+  return {
+    name: 'copy-opencascade-wasm',
+    buildStart: async () => {
+      const sourceDir = path.resolve(__dirname, 'node_modules/opencascade.js/dist');
+      const targetDir = path.resolve(__dirname, 'public/opencascade');
+      
+      // Create target directory if it doesn't exist
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+      
+      // Copy the WASM files
+      const filesToCopy = [
+        'opencascade.wasm.js',
+        'opencascade.wasm.wasm'
+      ];
+      
+      filesToCopy.forEach(file => {
+        const sourcePath = path.join(sourceDir, file);
+        const targetPath = path.join(targetDir, file);
+        if (fs.existsSync(sourcePath)) {
+          fs.copyFileSync(sourcePath, targetPath);
+          console.log(`Copied ${sourcePath} to ${targetPath}`);
+        } else {
+          console.warn(`Warning: Source file not found: ${sourcePath}`);
+        }
+      });
+    }
+  };
+};
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -15,48 +50,25 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     wasm(),
-    topLevelAwait(), // Add top level await support for WebAssembly
+    topLevelAwait(),
+    copyOpenCascadeFiles(),
     mode === 'development' &&
     componentTagger(),
   ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "opencascade.js": path.resolve(__dirname, "node_modules/opencascade.js"),
     },
     preserveSymlinks: true,
   },
   optimizeDeps: {
     exclude: ['opencascade.js'],
-    include: ['three'],
   },
   build: {
     target: 'esnext', // Required for WebAssembly support
     assetsInlineLimit: 0, // Don't inline WebAssembly files
     sourcemap: true, // Enable sourcemaps for debugging
-    rollupOptions: {
-      external: [
-        /\.wasm$/,
-        /\.wasm\.js$/,
-        /opencascade\.wasm\.wasm$/
-      ],
-      output: {
-        manualChunks: {
-          'three': ['three']
-        }
-      }
-    }
   },
-  // Make sure all WebAssembly assets are properly copied to the output directory
+  // Make sure all WebAssembly assets are properly handled
   publicDir: 'public',
-  // Tell Vite to rewrite import paths for WebAssembly in production
-  experimental: {
-    renderBuiltUrl(filename, { hostType }) {
-      if (filename.includes('.wasm')) {
-        // Force absolute paths for wasm files
-        return { relative: true, hostId: 'public' };
-      }
-      return filename;
-    }
-  }
 }));

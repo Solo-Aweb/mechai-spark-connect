@@ -21,6 +21,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import {
   Select,
@@ -38,6 +39,8 @@ const toolFormSchema = z.object({
   diameter: z.coerce.number().positive("Diameter must be positive"),
   length: z.coerce.number().positive("Length must be positive"),
   life_remaining: z.coerce.number().min(0, "Life remaining cannot be negative"),
+  cost: z.coerce.number().min(0, "Tool cost cannot be negative"),
+  replacement_cost: z.coerce.number().min(0, "Replacement cost cannot be negative"),
 });
 
 type ToolFormValues = z.infer<typeof toolFormSchema>;
@@ -45,6 +48,7 @@ type ToolFormValues = z.infer<typeof toolFormSchema>;
 type Machine = {
   id: string;
   name: string;
+  hourly_rate?: number;
 };
 
 type AddToolDialogProps = {
@@ -66,6 +70,8 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
       diameter: 0,
       length: 0,
       life_remaining: 100,
+      cost: 0,
+      replacement_cost: 0,
     },
   });
 
@@ -82,6 +88,8 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
           diameter: values.diameter,
           length: values.length,
           life_remaining: values.life_remaining,
+          cost: values.cost,
+          replacement_cost: values.replacement_cost,
         };
         
         const { data, error } = await supabase
@@ -157,7 +165,7 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
                     <SelectContent>
                       {machines?.map((machine) => (
                         <SelectItem key={machine.id} value={machine.id}>
-                          {machine.name}
+                          {machine.name} {machine.hourly_rate ? `(Rate: $${machine.hourly_rate}/hr)` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -220,6 +228,43 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
                 </FormItem>
               )}
             />
+            
+            <h3 className="text-lg font-medium mt-2">Cost Information</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="cost"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tool Cost ($)</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" min="0" {...field} />
+                    </FormControl>
+                    <FormDescription className="text-xs">
+                      Initial purchase cost
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="replacement_cost"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Replacement Cost ($)</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" min="0" {...field} />
+                    </FormControl>
+                    <FormDescription className="text-xs">
+                      Cost to replace when worn out
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
             <DialogFooter>
               <Button
                 type="submit"

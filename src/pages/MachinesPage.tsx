@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +34,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 
 // Define the Machine type based on the database schema
@@ -45,6 +47,9 @@ type Machine = {
   x_range: number;
   y_range: number;
   z_range: number;
+  hourly_rate: number;
+  setup_cost: number;
+  operating_cost: number;
   created_at: string;
 };
 
@@ -57,6 +62,9 @@ const machineFormSchema = z.object({
   x_range: z.coerce.number().positive("Must be a positive number"),
   y_range: z.coerce.number().positive("Must be a positive number"),
   z_range: z.coerce.number().positive("Must be a positive number"),
+  hourly_rate: z.coerce.number().min(0, "Hourly rate cannot be negative"),
+  setup_cost: z.coerce.number().min(0, "Setup cost cannot be negative"),
+  operating_cost: z.coerce.number().min(0, "Operating cost cannot be negative"),
 });
 
 type MachineFormValues = z.infer<typeof machineFormSchema>;
@@ -92,7 +100,10 @@ export default function MachinesPage() {
         spindle_rpm: newMachine.spindle_rpm,
         x_range: newMachine.x_range,
         y_range: newMachine.y_range,
-        z_range: newMachine.z_range
+        z_range: newMachine.z_range,
+        hourly_rate: newMachine.hourly_rate,
+        setup_cost: newMachine.setup_cost,
+        operating_cost: newMachine.operating_cost
       };
       
       const { data, error } = await supabase
@@ -126,6 +137,9 @@ export default function MachinesPage() {
       x_range: 0,
       y_range: 0,
       z_range: 0,
+      hourly_rate: 0,
+      setup_cost: 0,
+      operating_cost: 0,
     },
   });
 
@@ -212,6 +226,7 @@ export default function MachinesPage() {
                     )}
                   />
                 </div>
+                
                 <div className="grid grid-cols-3 gap-4">
                   <FormField
                     control={form.control}
@@ -253,6 +268,59 @@ export default function MachinesPage() {
                     )}
                   />
                 </div>
+
+                <h3 className="text-lg font-medium mt-4">Cost Information</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="hourly_rate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Hourly Rate ($)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" min="0" {...field} />
+                        </FormControl>
+                        <FormDescription className="text-xs">
+                          Base hourly cost for the machine
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="setup_cost"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Setup Cost ($)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" min="0" {...field} />
+                        </FormControl>
+                        <FormDescription className="text-xs">
+                          One-time cost for setup
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="operating_cost"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Operating Cost ($)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" min="0" {...field} />
+                        </FormControl>
+                        <FormDescription className="text-xs">
+                          Additional cost per operation
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
                 <DialogFooter>
                   <Button
                     type="submit"
@@ -284,6 +352,9 @@ export default function MachinesPage() {
               <TableHead>X Range (mm)</TableHead>
               <TableHead>Y Range (mm)</TableHead>
               <TableHead>Z Range (mm)</TableHead>
+              <TableHead>Hourly Rate ($)</TableHead>
+              <TableHead>Setup Cost ($)</TableHead>
+              <TableHead>Operating Cost ($)</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -297,11 +368,14 @@ export default function MachinesPage() {
                   <TableCell>{machine.x_range}</TableCell>
                   <TableCell>{machine.y_range}</TableCell>
                   <TableCell>{machine.z_range}</TableCell>
+                  <TableCell>{machine.hourly_rate || 'N/A'}</TableCell>
+                  <TableCell>{machine.setup_cost || 'N/A'}</TableCell>
+                  <TableCell>{machine.operating_cost || 'N/A'}</TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="text-center">
+                <TableCell colSpan={10} className="text-center">
                   No machines found. Add a new machine to get started.
                 </TableCell>
               </TableRow>

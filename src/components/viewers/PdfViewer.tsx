@@ -1,12 +1,13 @@
+
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import * as pdfjsLib from 'pdfjs-dist';
 import { supabase } from '@/integrations/supabase/client';
 
-// Pin worker to exact installed version
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.15.349/pdf.worker.min.js`;
+// Ensure PDF.js worker is properly set up
+// We need to set this explicitly - the automatic worker loading often fails
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 interface PdfViewerProps {
   url: string; // public Supabase URL
@@ -35,25 +36,44 @@ export const PdfViewer = ({ url }: PdfViewerProps) => {
     }
     setIsLoading(true);
     setError(null);
+    
     const loadPdf = async () => {
       try {
+        console.log("Loading PDF from URL:", url);
+        
         // Extract bucket and path
         const match = url.match(
           /https:\/\/[^/]+\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/
         );
-        if (!match) throw new Error('Invalid Supabase storage URL');
+        if (!match) {
+          console.error("Invalid URL format:", url);
+          throw new Error('Invalid Supabase storage URL');
+        }
         const bucket = match[1];
         const path = match[2].split('?')[0];
+        
+        console.log("Bucket:", bucket, "Path:", path);
 
         const { data: blob, error: dlErr } = await supabase
           .storage
           .from(bucket)
           .download(path);
-        if (dlErr || !blob) throw new Error(dlErr?.message || 'Download failed');
+          
+        if (dlErr || !blob) {
+          console.error("Download error:", dlErr);
+          throw new Error(dlErr?.message || 'Download failed');
+        }
+        
+        console.log("File downloaded successfully, size:", blob.size);
 
         const arrayBuffer = await blob.arrayBuffer();
         const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+        
+        console.log("PDF loading task created");
+        
         const pdf = await loadingTask.promise;
+        console.log("PDF loaded successfully, pages:", pdf.numPages);
+        
         setPdfDoc(pdf);
         setTotalPages(pdf.numPages);
         setCurrentPage(1);
@@ -64,6 +84,7 @@ export const PdfViewer = ({ url }: PdfViewerProps) => {
         setIsLoading(false);
       }
     };
+    
     loadPdf();
 
     return () => {
@@ -77,35 +98,65 @@ export const PdfViewer = ({ url }: PdfViewerProps) => {
 
   // Render page
   useEffect(() => {
+    if (!pdfDoc || !canvasRef.current) {
+      console.log("No PDF document or canvas ref available");
+      return;
+    }
+    
+    setIsLoading(true);
     let renderTask: any = null;
+    
     const renderPage = async () => {
-      if (!pdfDoc || !canvasRef.current) return;
-      setIsLoading(true);
       try {
+        console.log(`Rendering page ${currentPage} of ${totalPages}`);
         const page = await pdfDoc.getPage(currentPage);
         
         // Calculate scaling to fit in our fixed dimensions while maintaining aspect ratio
         const viewport = page.getViewport({ scale: 1 });
+        console.log("Original viewport size:", viewport.width, "x", viewport.height);
+        
         const scaleX = CANVAS_WIDTH / viewport.width;
         const scaleY = CANVAS_HEIGHT / viewport.height;
         const finalScale = Math.min(scaleX, scaleY) * scale;
         
+        console.log("Using scale factor:", finalScale);
+        
         const scaledViewport = page.getViewport({ scale: finalScale });
+        console.log("Scaled viewport size:", scaledViewport.width, "x", scaledViewport.height);
         
         const canvas = canvasRef.current;
+        if (!canvas) {
+          console.error("Canvas reference lost during rendering");
+          return;
+        }
+        
         const ctx = canvas.getContext('2d');
-        if (!ctx) throw new Error('2D context not available');
+        if (!ctx) {
+          console.error("Failed to get 2D context from canvas");
+          throw new Error('2D context not available');
+        }
         
         // Set canvas dimensions explicitly
         canvas.width = scaledViewport.width;
         canvas.height = scaledViewport.height;
         
-        // Set the display size to fixed dimensions (to keep it constrained)
+        // Set the display size to match actual dimensions
         canvas.style.width = `${scaledViewport.width}px`;
         canvas.style.height = `${scaledViewport.height}px`;
+        
+        console.log("Canvas dimensions set:", canvas.width, "x", canvas.height);
 
-        renderTask = page.render({ canvasContext: ctx, viewport: scaledViewport });
+        // Clear the canvas before rendering
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        console.log("Starting PDF render");
+        renderTask = page.render({
+          canvasContext: ctx,
+          viewport: scaledViewport
+        });
+        
         await renderTask.promise;
+        console.log("PDF page rendered successfully");
       } catch (err: any) {
         console.error('PDF render error:', err);
         setError(err.message || 'Failed to render PDF');
@@ -113,14 +164,16 @@ export const PdfViewer = ({ url }: PdfViewerProps) => {
         setIsLoading(false);
       }
     };
+    
     renderPage();
 
     return () => {
       if (renderTask?.cancel) {
+        console.log("Canceling render task during cleanup");
         renderTask.cancel();
       }
     };
-  }, [pdfDoc, currentPage, scale]);
+  }, [pdfDoc, currentPage, scale, totalPages]);
 
   // Controls
   const prev = () => setCurrentPage(p => Math.max(1, p - 1));
@@ -150,7 +203,7 @@ export const PdfViewer = ({ url }: PdfViewerProps) => {
       )}
       <div 
         ref={containerRef} 
-        className="flex-grow relative overflow-auto p-4 flex justify-center" 
+        className="flex-grow relative overflow-auto p-4 flex justify-center items-center bg-gray-50" 
         style={{ minHeight: 300 }}
       >
         {isLoading && (
@@ -166,7 +219,7 @@ export const PdfViewer = ({ url }: PdfViewerProps) => {
         )}
         <canvas 
           ref={canvasRef} 
-          className="shadow-lg" 
+          className="shadow-lg bg-white" 
           style={{ maxWidth: '100%', height: 'auto' }}
         />
       </div>

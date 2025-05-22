@@ -39,4 +39,4 @@ export const FileTypeViewer = ({ url, fileType }: FileTypeViewerProps) => {
       })()}
     </div>
   );
-}
+};

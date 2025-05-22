@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { formatDate, formatCurrency, formatTime } from "@/utils/formatters";
 import { ItineraryStep, Itinerary } from "@/types/itinerary";
-import { Loader2, AlertCircle, Info } from "lucide-react";
+import { Loader2, AlertCircle, Info, ShoppingCart } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +50,23 @@ export const ItineraryCard = ({
     return getSteps().filter(step => step.unservable).length;
   };
 
+  // Get all unique recommendations for purchasing
+  const getPurchaseRecommendations = () => {
+    const steps = getSteps();
+    const recommendations = steps
+      .filter(step => step.unservable && step.recommendation)
+      .map(step => ({
+        machineType: step.required_machine_type || 'Unknown machine type',
+        recommendation: step.recommendation || '',
+        stepDescription: step.description
+      }));
+      
+    // Remove duplicate recommendations
+    return recommendations.filter((recommendation, index, self) => 
+      index === self.findIndex((r) => r.recommendation === recommendation.recommendation)
+    );
+  };
+
   if (loadingItinerary) {
     return (
       <Card>
@@ -63,6 +80,8 @@ export const ItineraryCard = ({
   if (!itinerary) {
     return null;
   }
+
+  const recommendations = getPurchaseRecommendations();
 
   return (
     <Card>
@@ -169,6 +188,24 @@ export const ItineraryCard = ({
               Review the recommendations in the table for purchasing suggestions.
             </AlertDescription>
           </Alert>
+        )}
+
+        {recommendations.length > 0 && (
+          <div className="mt-6 border p-4 rounded-md bg-amber-50">
+            <h3 className="text-lg font-medium flex items-center gap-2 mb-3">
+              <ShoppingCart className="h-5 w-5 text-amber-600" /> 
+              Purchasing Recommendations
+            </h3>
+            <div className="space-y-3">
+              {recommendations.map((rec, index) => (
+                <div key={index} className="border-b pb-2 last:border-0">
+                  <p className="font-medium text-amber-800">For: {rec.stepDescription}</p>
+                  <p><strong>Required:</strong> {rec.machineType}</p>
+                  <p><strong>Recommendation:</strong> {rec.recommendation}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </CardContent>
       <CardFooter className="flex flex-col items-start">

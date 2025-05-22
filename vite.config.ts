@@ -37,6 +37,7 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       external: [
         /\.wasm$/,
+        /\.wasm\.js$/,
         /opencascade\.wasm\.wasm$/
       ],
       output: {

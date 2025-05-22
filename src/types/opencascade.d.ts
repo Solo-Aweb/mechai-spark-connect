@@ -23,7 +23,23 @@ declare module 'opencascade.js/dist/opencascade.wasm.js' {
   export default function (): Promise<OpenCascadeInstance>;
 }
 
-// Handle dynamic imports
+// Handle dynamic imports with relative or absolute paths
+declare module './node_modules/opencascade.js/dist/opencascade.wasm.js' {
+  import { OpenCascadeInstance } from 'opencascade.js';
+  
+  export function init(): Promise<OpenCascadeInstance>;
+  export default function (): Promise<OpenCascadeInstance>;
+}
+
+// Handle dynamic imports with absolute paths
+declare module '/node_modules/opencascade.js/dist/opencascade.wasm.js' {
+  import { OpenCascadeInstance } from 'opencascade.js';
+  
+  export function init(): Promise<OpenCascadeInstance>;
+  export default function (): Promise<OpenCascadeInstance>;
+}
+
+// Handle any wasm module imports
 declare module '*.wasm.js' {
   import { OpenCascadeInstance } from 'opencascade.js';
   

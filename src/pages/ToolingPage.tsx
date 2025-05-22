@@ -7,6 +7,7 @@ import { toast } from "@/components/ui/sonner";
 import { ToolingHeader } from "@/components/tooling/ToolingHeader";
 import { ToolingTable } from "@/components/tooling/ToolingTable";
 import { AddToolDialog } from "@/components/tooling/AddToolDialog";
+import { EditToolDialog } from "@/components/tooling/EditToolDialog";
 import { ErrorDisplay } from "@/components/tooling/ErrorDisplay";
 
 // Define the Tool type based on the database schema
@@ -18,6 +19,8 @@ type Tool = {
   diameter: number;
   length: number;
   life_remaining: number;
+  cost: number | null;
+  replacement_cost: number | null;
   created_at: string;
   machines: { name: string } | null;
 };
@@ -30,6 +33,8 @@ type Machine = {
 
 export default function ToolingPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
   const [selectedMachineId, setSelectedMachineId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -129,6 +134,12 @@ export default function ToolingPage() {
     setError(null);
   };
 
+  // Handle edit tool
+  const handleEditTool = (tool: Tool) => {
+    setSelectedTool(tool);
+    setIsEditDialogOpen(true);
+  };
+
   return (
     <AppLayout>
       <ToolingHeader 
@@ -150,11 +161,19 @@ export default function ToolingPage() {
         tools={tools}
         isLoadingTools={isLoadingTools}
         selectedMachineId={selectedMachineId}
+        onEditTool={handleEditTool}
       />
 
       <AddToolDialog 
         isOpen={isDialogOpen}
         setIsOpen={setIsDialogOpen}
+        machines={machines}
+      />
+
+      <EditToolDialog
+        isOpen={isEditDialogOpen}
+        setIsOpen={setIsEditDialogOpen}
+        tool={selectedTool}
         machines={machines}
       />
     </AppLayout>

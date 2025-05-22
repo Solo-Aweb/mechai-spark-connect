@@ -8,6 +8,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Edit } from "lucide-react";
 
 type Tool = {
   id: string;
@@ -25,9 +27,10 @@ type ToolingTableProps = {
   tools: (Tool & { machines: { name: string } })[] | undefined;
   isLoadingTools: boolean;
   selectedMachineId: string | null;
+  onEditTool: (tool: Tool) => void;
 };
 
-export function ToolingTable({ tools, isLoadingTools, selectedMachineId }: ToolingTableProps) {
+export function ToolingTable({ tools, isLoadingTools, selectedMachineId, onEditTool }: ToolingTableProps) {
   if (isLoadingTools) {
     return (
       <div className="flex justify-center py-8">
@@ -47,6 +50,7 @@ export function ToolingTable({ tools, isLoadingTools, selectedMachineId }: Tooli
           <TableHead>Diameter (mm)</TableHead>
           <TableHead>Length (mm)</TableHead>
           <TableHead>Life Remaining (%)</TableHead>
+          <TableHead>Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -59,11 +63,21 @@ export function ToolingTable({ tools, isLoadingTools, selectedMachineId }: Tooli
               <TableCell>{tool.diameter}</TableCell>
               <TableCell>{tool.length}</TableCell>
               <TableCell>{tool.life_remaining}%</TableCell>
+              <TableCell>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onEditTool(tool)}
+                >
+                  <Edit size={16} className="mr-1" />
+                  Edit
+                </Button>
+              </TableCell>
             </TableRow>
           ))
         ) : (
           <TableRow>
-            <TableCell colSpan={6} className="text-center">
+            <TableCell colSpan={7} className="text-center">
               {selectedMachineId
                 ? "No tools found for the selected machine. Add a new tool to get started."
                 : "No tools found. Add a new tool to get started."}

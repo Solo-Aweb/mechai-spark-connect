@@ -23,7 +23,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/sonner";
-import { Plus } from "lucide-react";
+import { Plus, Edit } from "lucide-react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -36,6 +36,7 @@ import {
   FormMessage,
   FormDescription,
 } from "@/components/ui/form";
+import { EditMachineDialog } from "@/components/machines/EditMachineDialog";
 
 // Define the Machine type based on the database schema
 type Machine = {
@@ -47,9 +48,9 @@ type Machine = {
   x_range: number;
   y_range: number;
   z_range: number;
-  hourly_rate: number;
-  setup_cost: number;
-  operating_cost: number;
+  hourly_rate: number | null;
+  setup_cost: number | null;
+  operating_cost: number | null;
   created_at: string;
 };
 
@@ -71,6 +72,8 @@ type MachineFormValues = z.infer<typeof machineFormSchema>;
 
 export default function MachinesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
   const queryClient = useQueryClient();
 
   // Define the query to fetch machines
@@ -145,6 +148,11 @@ export default function MachinesPage() {
 
   const onSubmit = (values: MachineFormValues) => {
     addMachineMutation.mutate(values);
+  };
+  
+  const handleEditClick = (machine: Machine) => {
+    setSelectedMachine(machine);
+    setIsEditDialogOpen(true);
   };
 
   if (error) {
@@ -355,6 +363,7 @@ export default function MachinesPage() {
               <TableHead>Hourly Rate ($)</TableHead>
               <TableHead>Setup Cost ($)</TableHead>
               <TableHead>Operating Cost ($)</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -371,11 +380,21 @@ export default function MachinesPage() {
                   <TableCell>{machine.hourly_rate || 'N/A'}</TableCell>
                   <TableCell>{machine.setup_cost || 'N/A'}</TableCell>
                   <TableCell>{machine.operating_cost || 'N/A'}</TableCell>
+                  <TableCell>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleEditClick(machine)}
+                    >
+                      <Edit size={16} className="mr-1" />
+                      Edit
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={10} className="text-center">
+                <TableCell colSpan={11} className="text-center">
                   No machines found. Add a new machine to get started.
                 </TableCell>
               </TableRow>
@@ -383,6 +402,12 @@ export default function MachinesPage() {
           </TableBody>
         </Table>
       )}
+      
+      <EditMachineDialog
+        isOpen={isEditDialogOpen}
+        setIsOpen={setIsEditDialogOpen}
+        machine={selectedMachine}
+      />
     </AppLayout>
   );
 }

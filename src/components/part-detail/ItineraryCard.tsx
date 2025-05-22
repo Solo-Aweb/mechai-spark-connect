@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { formatDate, formatCurrency, formatTime } from "@/utils/formatters";
 import { ItineraryStep, Itinerary } from "@/types/itinerary";
-import { Loader2, AlertCircle, Info, ShoppingCart } from "lucide-react";
+import { Loader2, AlertCircle, Info, ShoppingCart as ShoppingCartIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -154,7 +154,7 @@ export const ItineraryCard = ({
   };
 
   return (
-    <Card>
+    <Card className="w-full">
       <CardHeader>
         <CardTitle>Machining Itinerary</CardTitle>
         <CardDescription className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
@@ -281,7 +281,7 @@ export const ItineraryCard = ({
         {recommendations.length > 0 && (
           <div className="mt-6 border p-4 rounded-md bg-amber-50">
             <h3 className="text-lg font-medium flex items-center gap-2 mb-3">
-              <ShoppingCart className="h-5 w-5 text-amber-600" /> 
+              <ShoppingCartIcon className="h-5 w-5 text-amber-600" /> 
               Purchasing Recommendations
             </h3>
             <div className="space-y-3">
@@ -300,7 +300,7 @@ export const ItineraryCard = ({
         <div className="w-full space-y-4">
           <h4 className="font-medium text-foreground">Cost Calculation Parameters</h4>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Machine Hourly Rate</label>
               <Input 

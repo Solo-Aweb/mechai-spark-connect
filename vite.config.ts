@@ -22,14 +22,27 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // Define a specific alias for opencascade.js
+      // Define a specific alias for opencascade.js with an absolute path
       "opencascade.js": path.resolve(__dirname, "node_modules/opencascade.js/dist/opencascade.wasm.js"),
     },
+    // Enable nodeModules resolution to fix bare imports issue
+    preserveSymlinks: true,
   },
   optimizeDeps: {
     exclude: ['opencascade.js'],
+    // Include OpenCascade.js in the optimization
+    include: ['three'],
   },
   build: {
     target: 'esnext', // Required for WebAssembly support
+    // Improve handling of WebAssembly and large modules
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'opencascade': ['opencascade.js'],
+          'three': ['three']
+        }
+      }
+    }
   },
 }));

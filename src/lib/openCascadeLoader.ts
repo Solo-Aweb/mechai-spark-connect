@@ -6,8 +6,12 @@ export default async function OpenCascadeInstance() {
   try {
     console.log('Attempting to load OpenCascade.js WebAssembly module...');
     
-    // Import using the alias we defined in vite.config.ts
-    const module = await import('opencascade.js');
+    // Use a direct import path to the node_modules package
+    // This avoids the bare specifier issue
+    const modulePath = '/node_modules/opencascade.js/dist/opencascade.wasm.js';
+    console.log('Loading OpenCascade from path:', modulePath);
+    
+    const module = await import(/* @vite-ignore */ modulePath);
     console.log('OpenCascade module loaded:', module);
     
     if (module.default && typeof module.default === 'function') {

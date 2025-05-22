@@ -28,6 +28,9 @@ export const StepViewer = ({ url }: StepViewerProps) => {
           <p className="text-gray-500 text-sm mt-2 text-center">
             Check that the STEP file is valid and compatible with the viewer.
           </p>
+          <p className="text-gray-400 text-xs mt-2 text-center">
+            Technical details: {typeof error === 'object' ? JSON.stringify(error) : String(error)}
+          </p>
         </div>
       )}
       

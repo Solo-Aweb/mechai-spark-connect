@@ -7,9 +7,16 @@ declare module 'opencascade.js' {
       geometry: THREE.BufferGeometry;
       mesh?: THREE.Mesh;
     };
+    // Add any other methods you might use
   }
 
   // Export pattern for the init function
   export function init(): Promise<OpenCascadeInstance>;
   export default function init(): Promise<OpenCascadeInstance>;
+}
+
+// Also allow direct import from the path
+declare module '*/opencascade.wasm.js' {
+  export * from 'opencascade.js';
+  export { default } from 'opencascade.js';
 }

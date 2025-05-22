@@ -61,12 +61,13 @@ export const useStepModel = (url: string): StepModelResult => {
         if (mounted) {
           setMesh(stepMesh);
           setIsLoading(false);
+          setError(null);
         }
 
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error loading STEP file:', error);
         if (mounted) {
-          setError('Failed to load STEP model. See console for details.');
+          setError(error?.message || 'Failed to load STEP model. See console for details.');
           setIsLoading(false);
           toast.error('Failed to load STEP model');
         }

@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ItineraryCardProps {
   itinerary: Itinerary | null;
@@ -35,6 +36,8 @@ export const ItineraryCard = ({
   loadingItinerary, 
   itineraryError 
 }: ItineraryCardProps) => {
+  const isMobile = useIsMobile();
+  
   // Helper function to extract steps from the itinerary
   const getSteps = () => {
     if (!itinerary || !itinerary.steps) return [];
@@ -83,95 +86,180 @@ export const ItineraryCard = ({
 
   const recommendations = getPurchaseRecommendations();
 
+  // Render mobile view of steps
+  const renderMobileSteps = () => {
+    return getSteps().map((step: ItineraryStep, index: number) => (
+      <div 
+        key={index} 
+        className={`border rounded-md p-4 mb-4 ${step.unservable ? "bg-red-50 border-red-200" : ""}`}
+      >
+        <div className="flex justify-between items-center mb-2">
+          <span className="font-bold">Step {index + 1}</span>
+          {step.unservable ? (
+            <Badge variant="destructive">Unservable</Badge>
+          ) : (
+            <Badge variant="success" className="bg-green-100 text-green-700 hover:bg-green-200">Servable</Badge>
+          )}
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <div className="font-medium">Operation:</div>
+          <div>{step.description || 'N/A'}</div>
+          
+          <div className="font-medium">Machine:</div>
+          <div>
+            {step.machine_name || (step.unservable ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="outline" className="bg-red-50 text-red-500 border-red-300 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" /> Missing
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p><strong>Required:</strong> {step.required_machine_type || "Unknown machine type"}</p>
+                    {step.recommendation && <p className="mt-1"><strong>Recommendation:</strong> {step.recommendation}</p>}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : 'Unknown Machine')}
+          </div>
+          
+          <div className="font-medium">Tool:</div>
+          <div>
+            {step.tool_name || (step.machine_id && !step.tooling_id ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-300 flex items-center gap-1">
+                      <Info className="h-3 w-3" /> Missing
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>The appropriate tool is not available for this operation.</p>
+                    {step.recommendation && <p className="mt-1"><strong>Recommendation:</strong> {step.recommendation}</p>}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : 'N/A')}
+          </div>
+          
+          <div className="font-medium">Time (min):</div>
+          <div>{step.time || 'N/A'}</div>
+          
+          <div className="font-medium">Cost:</div>
+          <div>{formatCurrency(step.cost || 0)}</div>
+        </div>
+      </div>
+    ));
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Machining Itinerary</CardTitle>
-        <CardDescription>
-          Generated on {formatDate(itinerary.created_at)} • 
-          Total Cost: {formatCurrency(itinerary.total_cost)} •
+        <CardDescription className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+          <span>Generated on {formatDate(itinerary.created_at)}</span>
+          <span className="hidden sm:inline">•</span>
+          <span>Total Cost: {formatCurrency(itinerary.total_cost)}</span>
           {countUnservableSteps() > 0 && (
-            <span className="text-red-500 ml-1">
-              {countUnservableSteps()} step{countUnservableSteps() !== 1 ? 's' : ''} require additional equipment
-            </span>
+            <>
+              <span className="hidden sm:inline">•</span>
+              <span className="text-red-500">
+                {countUnservableSteps()} step{countUnservableSteps() !== 1 ? 's' : ''} require additional equipment
+              </span>
+            </>
           )}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="border rounded-md overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Step</TableHead>
-                <TableHead>Operation</TableHead>
-                <TableHead>Machine</TableHead>
-                <TableHead>Tool</TableHead>
-                <TableHead>Time (min)</TableHead>
-                <TableHead>Cost</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {hasSteps() ? 
-                getSteps().map((step: ItineraryStep, index: number) => (
-                  <TableRow key={index} className={step.unservable ? "bg-red-50" : ""}>
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell>{step.description || 'N/A'}</TableCell>
-                    <TableCell>
-                      {step.machine_name || (step.unservable ? (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge variant="outline" className="bg-red-50 text-red-500 border-red-300 flex items-center gap-1">
-                                <AlertCircle className="h-3 w-3" /> Missing
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
-                              <p><strong>Required:</strong> {step.required_machine_type || "Unknown machine type"}</p>
-                              {step.recommendation && <p className="mt-1"><strong>Recommendation:</strong> {step.recommendation}</p>}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ) : 'Unknown Machine')}
-                    </TableCell>
-                    <TableCell>
-                      {step.tool_name || (step.machine_id && !step.tooling_id ? (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-300 flex items-center gap-1">
-                                <Info className="h-3 w-3" /> Missing
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>The appropriate tool is not available for this operation.</p>
-                              {step.recommendation && <p className="mt-1"><strong>Recommendation:</strong> {step.recommendation}</p>}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ) : 'N/A')}
-                    </TableCell>
-                    <TableCell>{step.time || 'N/A'}</TableCell>
-                    <TableCell>{formatCurrency(step.cost || 0)}</TableCell>
-                    <TableCell>
-                      {step.unservable ? (
-                        <Badge variant="destructive">Unservable</Badge>
-                      ) : (
-                        <Badge variant="success" className="bg-green-100 text-green-700 hover:bg-green-200">Servable</Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                )) : (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center text-gray-500">
-                      No steps available in the itinerary data
-                    </TableCell>
-                  </TableRow>
-                )
-              }
-            </TableBody>
-          </Table>
-        </div>
+        {isMobile ? (
+          // Mobile view - card-based layout
+          <div className="space-y-4">
+            {hasSteps() ? (
+              renderMobileSteps()
+            ) : (
+              <div className="text-center text-gray-500 py-4">
+                No steps available in the itinerary data
+              </div>
+            )}
+          </div>
+        ) : (
+          // Desktop view - table layout
+          <div className="border rounded-md overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Step</TableHead>
+                  <TableHead>Operation</TableHead>
+                  <TableHead>Machine</TableHead>
+                  <TableHead>Tool</TableHead>
+                  <TableHead>Time (min)</TableHead>
+                  <TableHead>Cost</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {hasSteps() ? 
+                  getSteps().map((step: ItineraryStep, index: number) => (
+                    <TableRow key={index} className={step.unservable ? "bg-red-50" : ""}>
+                      <TableCell>{index + 1}</TableCell>
+                      <TableCell>{step.description || 'N/A'}</TableCell>
+                      <TableCell>
+                        {step.machine_name || (step.unservable ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="outline" className="bg-red-50 text-red-500 border-red-300 flex items-center gap-1">
+                                  <AlertCircle className="h-3 w-3" /> Missing
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <p><strong>Required:</strong> {step.required_machine_type || "Unknown machine type"}</p>
+                                {step.recommendation && <p className="mt-1"><strong>Recommendation:</strong> {step.recommendation}</p>}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : 'Unknown Machine')}
+                      </TableCell>
+                      <TableCell>
+                        {step.tool_name || (step.machine_id && !step.tooling_id ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-300 flex items-center gap-1">
+                                  <Info className="h-3 w-3" /> Missing
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>The appropriate tool is not available for this operation.</p>
+                                {step.recommendation && <p className="mt-1"><strong>Recommendation:</strong> {step.recommendation}</p>}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : 'N/A')}
+                      </TableCell>
+                      <TableCell>{step.time || 'N/A'}</TableCell>
+                      <TableCell>{formatCurrency(step.cost || 0)}</TableCell>
+                      <TableCell>
+                        {step.unservable ? (
+                          <Badge variant="destructive">Unservable</Badge>
+                        ) : (
+                          <Badge variant="success" className="bg-green-100 text-green-700 hover:bg-green-200">Servable</Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-gray-500">
+                        No steps available in the itinerary data
+                      </TableCell>
+                    </TableRow>
+                  )
+                }
+              </TableBody>
+            </Table>
+          </div>
+        )}
         
         {itineraryError && (
           <Alert className="mt-4" variant="destructive">
@@ -246,7 +334,7 @@ export const ItineraryCard = ({
             <label className="text-sm font-medium">Calculation Formula</label>
             <Textarea 
               readOnly 
-              className="font-mono text-sm bg-muted"
+              className="font-mono text-sm bg-muted text-xs sm:text-sm"
               value={`For each step:
 Machine cost = Hourly rate × (Time in minutes ÷ 60)
 Total step cost = Machine cost + Tool wear cost + Setup cost

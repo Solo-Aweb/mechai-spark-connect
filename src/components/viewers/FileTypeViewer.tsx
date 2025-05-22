@@ -20,7 +20,7 @@ export const FileTypeViewer = ({ url, fileType }: FileTypeViewerProps) => {
       {normalizedType === 'dxf' && <DxfViewer url={url} />}
       {normalizedType === 'svg' && <SvgViewer url={url} />}
       {normalizedType === 'pdf' && <PdfViewer url={url} />}
-      {!( ['stl','step','dxf','svg','pdf'].includes(normalizedType) ) && (
+      {!['stl','step','dxf','svg','pdf'].includes(normalizedType) && (
         <div className="w-full h-full flex items-center justify-center bg-gray-50">
           <p className="text-gray-400">Unsupported format: {fileType}</p>
         </div>

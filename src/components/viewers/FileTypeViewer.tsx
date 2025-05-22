@@ -1,4 +1,3 @@
-
 import { StepViewer } from './StepViewer';
 import { StlViewer } from './StlViewer';
 import { DxfViewer } from './DxfViewer';
@@ -11,33 +10,20 @@ interface FileTypeViewerProps {
 }
 
 export const FileTypeViewer = ({ url, fileType }: FileTypeViewerProps) => {
-  // Normalize file type
   const normalizedType = fileType.toLowerCase();
 
-  switch (normalizedType) {
-    // force the viewer to take up all available space
   return (
     <div className="w-full h-full">
-      {(() => {
-        switch (normalizedType) {
-      case 'stl':
-        return <StlViewer url={url} />;
-      case 'step':
-        return <StepViewer url={url} />;
-      case 'dxf':
-        return <DxfViewer url={url} />;
-      case 'svg':
-        return <SvgViewer url={url} />;
-      case 'pdf':
-        return <PdfViewer url={url} />;
-      default:
-        return (
-          <div className="w-full h-full flex items-center justify-center bg-gray-50">
-            <p className="text-gray-400">Unsupported format: {fileType}</p>
-          </div>
-          );
-        }
-      })()}
+      {normalizedType === 'stl' && <StlViewer url={url} />}
+      {normalizedType === 'step' && <StepViewer url={url} />}
+      {normalizedType === 'dxf' && <DxfViewer url={url} />}
+      {normalizedType === 'svg' && <SvgViewer url={url} />}
+      {normalizedType === 'pdf' && <PdfViewer url={url} />}
+      {!['stl', 'step', 'dxf', 'svg', 'pdf'].includes(normalizedType) && (
+        <div className="w-full h-full flex items-center justify-center bg-gray-50">
+          <p className="text-gray-400">Unsupported format: {fileType}</p>
+        </div>
+      )}
     </div>
   );
-}
+};

@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,6 +21,10 @@ export const PdfViewer = ({ url }: PdfViewerProps) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pdfDoc, setPdfDoc] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
   const [scale, setScale] = useState(1);
+  
+  // Fixed dimensions for the canvas
+  const CANVAS_WIDTH = 800;
+  const CANVAS_HEIGHT = 600;
 
   // Load PDF with Supabase download to bypass CORS/attachment issues
   useEffect(() => {
@@ -64,8 +67,11 @@ export const PdfViewer = ({ url }: PdfViewerProps) => {
     loadPdf();
 
     return () => {
-      pdfDoc?.destroy();
-      setPdfDoc(null);
+      // Cleanup
+      if (pdfDoc) {
+        pdfDoc.destroy().catch(err => console.error('Error destroying PDF document:', err));
+        setPdfDoc(null);
+      }
     };
   }, [url]);
 
@@ -73,27 +79,32 @@ export const PdfViewer = ({ url }: PdfViewerProps) => {
   useEffect(() => {
     let renderTask: any = null;
     const renderPage = async () => {
-      if (!pdfDoc || !canvasRef.current || !containerRef.current) return;
+      if (!pdfDoc || !canvasRef.current) return;
       setIsLoading(true);
       try {
         const page = await pdfDoc.getPage(currentPage);
-        // Fit to container
-        const cont = containerRef.current;
-        const vp = page.getViewport({ scale: 1 });
-        const widthScale = (cont.clientWidth - 40) / vp.width;
-        const heightScale = (cont.clientHeight - 40) / vp.height;
-        const fitScale = Math.min(widthScale, heightScale, 1);
-        const finalScale = scale * fitScale;
-        const scaledVp = page.getViewport({ scale: finalScale });
+        
+        // Calculate scaling to fit in our fixed dimensions while maintaining aspect ratio
+        const viewport = page.getViewport({ scale: 1 });
+        const scaleX = CANVAS_WIDTH / viewport.width;
+        const scaleY = CANVAS_HEIGHT / viewport.height;
+        const finalScale = Math.min(scaleX, scaleY) * scale;
+        
+        const scaledViewport = page.getViewport({ scale: finalScale });
+        
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         if (!ctx) throw new Error('2D context not available');
-        canvas.width = scaledVp.width;
-        canvas.height = scaledVp.height;
-        canvas.style.width = `${scaledVp.width}px`;
-        canvas.style.height = `${scaledVp.height}px`;
+        
+        // Set canvas dimensions explicitly
+        canvas.width = scaledViewport.width;
+        canvas.height = scaledViewport.height;
+        
+        // Set the display size to fixed dimensions (to keep it constrained)
+        canvas.style.width = `${scaledViewport.width}px`;
+        canvas.style.height = `${scaledViewport.height}px`;
 
-        renderTask = page.render({ canvasContext: ctx, viewport: scaledVp });
+        renderTask = page.render({ canvasContext: ctx, viewport: scaledViewport });
         await renderTask.promise;
       } catch (err: any) {
         console.error('PDF render error:', err);
@@ -105,7 +116,9 @@ export const PdfViewer = ({ url }: PdfViewerProps) => {
     renderPage();
 
     return () => {
-      renderTask?.cancel?.();
+      if (renderTask?.cancel) {
+        renderTask.cancel();
+      }
     };
   }, [pdfDoc, currentPage, scale]);
 
@@ -135,7 +148,11 @@ export const PdfViewer = ({ url }: PdfViewerProps) => {
           </div>
         </div>
       )}
-      <div ref={containerRef} className="flex-grow relative overflow-auto p-4" style={{ minHeight: 300 }}>
+      <div 
+        ref={containerRef} 
+        className="flex-grow relative overflow-auto p-4 flex justify-center" 
+        style={{ minHeight: 300 }}
+      >
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center z-10 bg-white bg-opacity-70">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -147,7 +164,11 @@ export const PdfViewer = ({ url }: PdfViewerProps) => {
             <p className="text-red-500">{error}</p>
           </div>
         )}
-        <canvas ref={canvasRef} className="mx-auto shadow-lg" />
+        <canvas 
+          ref={canvasRef} 
+          className="shadow-lg" 
+          style={{ maxWidth: '100%', height: 'auto' }}
+        />
       </div>
     </div>
   );

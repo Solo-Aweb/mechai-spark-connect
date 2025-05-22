@@ -146,6 +146,22 @@ export const ItineraryCard = ({
           
           <div className="font-medium">Cost:</div>
           <div>{formatCurrency(step.cost || 0)}</div>
+
+          {step.fixture_requirements && (
+            <>
+              <div className="font-medium">Fixturing:</div>
+              <div>{step.fixture_requirements}</div>
+            </>
+          )}
+
+          {step.setup_description && (
+            <>
+              <div className="font-medium col-span-2 mt-2 text-amber-800">Setup:</div>
+              <div className="col-span-2 bg-amber-50 p-2 rounded text-amber-800 text-xs">
+                {step.setup_description}
+              </div>
+            </>
+          )}
         </div>
       </div>
     ));
@@ -193,6 +209,7 @@ export const ItineraryCard = ({
                   <TableHead>Tool</TableHead>
                   <TableHead>Time (min)</TableHead>
                   <TableHead>Cost</TableHead>
+                  <TableHead>Fixturing</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -201,7 +218,27 @@ export const ItineraryCard = ({
                   getSteps().map((step: ItineraryStep, index: number) => (
                     <TableRow key={index} className={step.unservable ? "bg-red-50" : ""}>
                       <TableCell>{index + 1}</TableCell>
-                      <TableCell>{step.description || 'N/A'}</TableCell>
+                      <TableCell>
+                        <div>
+                          {step.description || 'N/A'}
+                        </div>
+                        {step.setup_description && (
+                          <div className="mt-2">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 cursor-help">
+                                    Setup details
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-md">
+                                  <p>{step.setup_description}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell>
                         {step.machine_name || (step.unservable ? (
                           <TooltipProvider>
@@ -238,6 +275,7 @@ export const ItineraryCard = ({
                       </TableCell>
                       <TableCell>{step.time || 'N/A'}</TableCell>
                       <TableCell>{formatCurrency(step.cost || 0)}</TableCell>
+                      <TableCell>{step.fixture_requirements || 'Standard'}</TableCell>
                       <TableCell>
                         {step.unservable ? (
                           <Badge variant="destructive">Unservable</Badge>
@@ -248,7 +286,7 @@ export const ItineraryCard = ({
                     </TableRow>
                   )) : (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-gray-500">
+                      <TableCell colSpan={8} className="text-center text-gray-500">
                         No steps available in the itinerary data
                       </TableCell>
                     </TableRow>

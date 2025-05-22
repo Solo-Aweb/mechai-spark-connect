@@ -103,7 +103,9 @@ const PartDetailPage = () => {
                 cost: step.cost || 0,
                 unservable: step.unservable || false,
                 required_machine_type: step.required_machine_type || null,
-                recommendation: step.recommendation || null
+                recommendation: step.recommendation || null,
+                fixture_requirements: step.fixture_requirements || null,
+                setup_description: step.setup_description || null
               })),
               total_cost: stepsObj.reduce((sum, step) => sum + (step.cost || 0), 0)
             };
@@ -118,7 +120,9 @@ const PartDetailPage = () => {
                 cost: step.cost || 0,
                 unservable: step.unservable || false,
                 required_machine_type: step.required_machine_type || null,
-                recommendation: step.recommendation || null
+                recommendation: step.recommendation || null,
+                fixture_requirements: step.fixture_requirements || null,
+                setup_description: step.setup_description || null
               })),
               total_cost: stepsObj.total_cost || stepsObj.steps.reduce((sum, step) => sum + (step.cost || 0), 0)
             };
@@ -173,7 +177,9 @@ const PartDetailPage = () => {
               tool_wear_cost: 5, // Example default value
               setup_cost: 10, // Example default value
               required_machine_type: step.required_machine_type || (step.unservable ? "Required machine type not specified" : null),
-              recommendation: step.recommendation || null
+              recommendation: step.recommendation || null,
+              fixture_requirements: step.fixture_requirements || null,
+              setup_description: step.setup_description || null
             };
           })
         );

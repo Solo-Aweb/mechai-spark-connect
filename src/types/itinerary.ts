@@ -15,6 +15,8 @@ export interface ItineraryStep {
   setup_cost?: number;
   required_machine_type?: string;
   recommendation?: string;
+  fixture_requirements?: string;
+  setup_description?: string;
 }
 
 export interface ItinerarySteps {

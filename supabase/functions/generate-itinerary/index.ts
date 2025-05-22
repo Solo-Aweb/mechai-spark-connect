@@ -136,10 +136,10 @@ serve(async (req) => {
       return acc;
     }, {});
 
-    // Prepare prompt for OpenAI based on available data
+    // Prepare enhanced prompt for OpenAI based on available data
     let prompt;
     if (svgContent) {
-      prompt = `Given these 2D vectors ${JSON.stringify(svgContent)}, analyze and identify ALL required machining operations. For each operation, determine if we have a suitable machine and tool from our available equipment:
+      prompt = `Given these 2D vectors ${JSON.stringify(svgContent)}, analyze and identify ALL required machining operations. For each operation, determine if we have a suitable machine and tool from our available equipment.
 
 AVAILABLE MACHINES:
 ${JSON.stringify(machines)}
@@ -149,6 +149,25 @@ ${JSON.stringify(tooling)}
 
 AVAILABLE MATERIALS:
 ${JSON.stringify(materials)}
+
+I want you to think like an expert machinist with decades of experience:
+
+1. FIXTURING CONSIDERATIONS:
+   - Break operations into separate steps when they require different workpiece orientations or fixtures
+   - For each step, evaluate if it can be completed within a single setup/fixturing of the part
+   - When multiple setups are needed, split into separate machining steps with clear fixturing instructions
+   - Consider workholding stability requirements for each step
+
+2. MACHINE CAPABILITY ANALYSIS:
+   - Exploit capabilities of multi-axis machines when available (e.g., 3-axis/5-axis mills, mill-turn centers)
+   - If a lathe has live tooling, consider performing drilling/threading operations without moving to a mill
+   - Evaluate whether a CNC mill can complete features that might traditionally require separate processes
+   - Consider feature accessibility within a single setup (can the tool reach all areas?)
+
+3. OPERATION OPTIMIZATION:
+   - Combine drilling and tapping operations when using the same machine
+   - Group similar operations that use the same tool to minimize tool changes
+   - Identify when special fixturing or workholding devices would be needed
 
 For each machining step:
 1. Identify the required machine type (mill, lathe, drill press, etc.)
@@ -163,14 +182,16 @@ IMPORTANT: Include ALL necessary steps, even if we don't have the equipment to p
 For steps that cannot be performed with our inventory, provide detailed recommendations about what machine type and/or tool would be needed.
 
 Return ONLY valid JSON with a "steps" array of objects, where each object has:
-- "description": detailed description of the machining step
+- "description": detailed description of the machining step including specific fixturing requirements
 - "machine_id": ID of selected machine (or null if unavailable)
 - "tooling_id": ID of selected tool (or null if unavailable)
 - "time": estimated time in minutes
 - "cost": calculated cost
 - "unservable": boolean indicating if we can't perform this step
 - "required_machine_type": machine type needed if unavailable
-- "recommendation": purchase recommendation if needed`;
+- "recommendation": purchase recommendation if needed
+- "fixture_requirements": specific fixturing needed for this step
+- "setup_description": description of how the part should be positioned/secured`;
     } else {
       prompt = `Given part with URL ${part.file_url || 'No file URL available'}, plan a sequence of ALL necessary machining steps. For each step, determine if we have a suitable machine and tool from our equipment:
 
@@ -183,6 +204,25 @@ ${JSON.stringify(tooling)}
 AVAILABLE MATERIALS:
 ${JSON.stringify(materials)}
 
+I want you to think like an expert machinist with decades of experience:
+
+1. FIXTURING CONSIDERATIONS:
+   - Break operations into separate steps when they require different workpiece orientations or fixtures
+   - For each step, evaluate if it can be completed within a single setup/fixturing of the part
+   - When multiple setups are needed, split into separate machining steps with clear fixturing instructions
+   - Consider workholding stability requirements for each step
+
+2. MACHINE CAPABILITY ANALYSIS:
+   - Exploit capabilities of multi-axis machines when available (e.g., 3-axis/5-axis mills, mill-turn centers)
+   - If a lathe has live tooling, consider performing drilling/threading operations without moving to a mill
+   - Evaluate whether a CNC mill can complete features that might traditionally require separate processes
+   - Consider feature accessibility within a single setup (can the tool reach all areas?)
+
+3. OPERATION OPTIMIZATION:
+   - Combine drilling and tapping operations when using the same machine
+   - Group similar operations that use the same tool to minimize tool changes
+   - Identify when special fixturing or workholding devices would be needed
+
 For each machining step:
 1. Identify the required machine type (mill, lathe, drill press, etc.)
 2. Choose the most appropriate machine from our inventory
@@ -196,17 +236,19 @@ IMPORTANT: Include ALL necessary steps, even if we don't have the equipment to p
 For steps that cannot be performed with our inventory, provide detailed recommendations about what machine type and/or tool would be needed.
 
 Return ONLY valid JSON with a "steps" array of objects, where each object has:
-- "description": detailed description of the machining step
+- "description": detailed description of the machining step including specific fixturing requirements
 - "machine_id": ID of selected machine (or null if unavailable)
 - "tooling_id": ID of selected tool (or null if unavailable)
 - "time": estimated time in minutes
 - "cost": calculated cost
 - "unservable": boolean indicating if we can't perform this step
 - "required_machine_type": machine type needed if unavailable
-- "recommendation": purchase recommendation if needed`;
+- "recommendation": purchase recommendation if needed
+- "fixture_requirements": specific fixturing needed for this step
+- "setup_description": description of how the part should be positioned/secured`;
     }
 
-    // Call OpenAI API
+    // Call OpenAI API with enhanced system prompt
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -218,7 +260,16 @@ Return ONLY valid JSON with a "steps" array of objects, where each object has:
         messages: [
           {
             role: 'system',
-            content: 'You are a CNC machining expert tasked with planning machining operations. You carefully analyze each step and make sure to match with appropriate machinery and tooling. If a required machine or tool is unavailable, you provide specific recommendations. Return ONLY valid JSON with no markdown formatting or explanations.'
+            content: `You are an expert machinist with 30+ years of experience in CNC programming, fixturing, and multi-axis machining. You have deep knowledge of:
+            
+1. Advanced fixturing techniques and workholding solutions
+2. Multi-axis machining strategies and tool path optimization
+3. Combining operations to minimize setups and tool changes
+4. Feature-based machining and design for manufacturability
+5. Live tooling capabilities on lathes and mill-turn centers
+6. Efficient use of machine capabilities to minimize setup changes
+            
+Your goal is to create the most efficient machining plan possible, intelligently grouping operations by fixturing requirements and machine capabilities. Return ONLY valid JSON with no markdown formatting or explanations.`
           },
           {
             role: 'user',
@@ -310,7 +361,9 @@ Return ONLY valid JSON with a "steps" array of objects, where each object has:
             cost: step.cost || 0,
             unservable: step.status === "unservable" || step.unservable || false,
             required_machine_type: step.required_machine_type || null,
-            recommendation: step.recommendation || null
+            recommendation: step.recommendation || null,
+            fixture_requirements: step.fixture_requirements || step.fixturing || null,
+            setup_description: step.setup_description || step.setup || null
           })),
           total_cost: itinerary.machining_steps.reduce((sum, step) => sum + (parseFloat(step.cost) || 0), 0)
         };
@@ -329,7 +382,9 @@ Return ONLY valid JSON with a "steps" array of objects, where each object has:
               cost: step.cost || 0,
               unservable: step.unservable || false,
               required_machine_type: step.required_machine_type || null,
-              recommendation: step.recommendation || null
+              recommendation: step.recommendation || null,
+              fixture_requirements: step.fixture_requirements || step.fixturing || null,
+              setup_description: step.setup_description || step.setup || null
             })),
             total_cost: itinerary.reduce((sum, step) => sum + (parseFloat(step.cost) || 0), 0)
           };
@@ -362,7 +417,9 @@ Return ONLY valid JSON with a "steps" array of objects, where each object has:
         cost: typeof step.cost === 'string' ? parseFloat(step.cost) : (step.cost || 0),
         unservable: step.unservable || false,
         required_machine_type: step.required_machine_type || (step.unservable ? "Unknown machine type" : null),
-        recommendation: step.recommendation || (step.unservable ? "Additional equipment needed" : null)
+        recommendation: step.recommendation || (step.unservable ? "Additional equipment needed" : null),
+        fixture_requirements: step.fixture_requirements || step.fixturing || null,
+        setup_description: step.setup_description || step.setup || null
       }));
 
       // Recalculate total cost

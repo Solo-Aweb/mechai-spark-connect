@@ -14,27 +14,13 @@ export const FileTypeViewer = ({ url, fileType }: FileTypeViewerProps) => {
   // Normalize file type
   const normalizedType = fileType.toLowerCase();
 
-  // Extract file path from URL for DXF files
-  const extractFilePath = (url: string): string => {
-    try {
-      const urlObj = new URL(url);
-      const pathParts = urlObj.pathname.split('/');
-      // Get the last segment of the path which should be the filename
-      return pathParts[pathParts.length - 1];
-    } catch (error) {
-      console.error('Error extracting file path:', error);
-      // If URL parsing fails, just return the original URL
-      return url;
-    }
-  };
-
   switch (normalizedType) {
     case 'stl':
       return <StlViewer url={url} />;
     case 'step':
       return <StepViewer url={url} />;
     case 'dxf':
-      return <DxfViewer filePath={extractFilePath(url)} />;
+      return <DxfViewer url={url} />;
     case 'svg':
       return <SvgViewer url={url} />;
     case 'pdf':

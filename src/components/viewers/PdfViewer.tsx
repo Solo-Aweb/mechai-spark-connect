@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -119,18 +120,18 @@ export const PdfViewer = ({ url }: PdfViewerProps) => {
       {totalPages > 0 && (
         <div className="p-2 bg-gray-100 flex items-center justify-between border-b">
           <div className="flex items-center space-x-2">
-            <Button outline size="sm" onClick={prev} disabled={currentPage <= 1}>
+            <Button variant="outline" size="sm" onClick={prev} disabled={currentPage <= 1}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <span className="text-sm">Page {currentPage} of {totalPages}</span>
-            <Button outline size="sm" onClick={next} disabled={currentPage >= totalPages}>
+            <Button variant="outline" size="sm" onClick={next} disabled={currentPage >= totalPages}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
           <div className="flex items-center space-x-2">
-            <Button outline size="sm" onClick={zoomOut}>-</Button>
+            <Button variant="outline" size="sm" onClick={zoomOut}>-</Button>
             <span className="text-sm">{Math.round(scale * 100)}%</span>
-            <Button outline size="sm" onClick={zoomIn}>+</Button>
+            <Button variant="outline" size="sm" onClick={zoomIn}>+</Button>
           </div>
         </div>
       )}

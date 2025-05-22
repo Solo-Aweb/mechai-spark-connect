@@ -19,8 +19,6 @@ import {
 import { formatDate, formatCurrency, formatTime } from "@/utils/formatters";
 import { ItineraryStep, Itinerary } from "@/types/itinerary";
 import { Loader2, AlertCircle, Info, ShoppingCart as ShoppingCartIcon } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -296,58 +294,6 @@ export const ItineraryCard = ({
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex flex-col items-start">
-        <div className="w-full space-y-4">
-          <h4 className="font-medium text-foreground">Cost Calculation Parameters</h4>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Machine Hourly Rate</label>
-              <Input 
-                type="number" 
-                placeholder="$25.00" 
-                className="w-full" 
-                defaultValue="25"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Tool Wear Cost (per operation)</label>
-              <Input 
-                type="number" 
-                placeholder="$5.00" 
-                className="w-full" 
-                defaultValue="5"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Setup Cost</label>
-              <Input 
-                type="number" 
-                placeholder="$10.00" 
-                className="w-full" 
-                defaultValue="10"
-              />
-            </div>
-          </div>
-          
-          <div className="space-y-2 w-full">
-            <label className="text-sm font-medium">Calculation Formula</label>
-            <Textarea 
-              readOnly 
-              className="font-mono text-sm bg-muted text-xs sm:text-sm"
-              value={`For each step:
-Machine cost = Hourly rate × (Time in minutes ÷ 60)
-Total step cost = Machine cost + Tool wear cost + Setup cost
-
-Example for step 1 (${getSteps()[0]?.time || 30} minutes):
-$25/hr × (${getSteps()[0]?.time || 30} min ÷ 60) = $${((25 * (getSteps()[0]?.time || 30)) / 60).toFixed(2)}
-$${((25 * (getSteps()[0]?.time || 30)) / 60).toFixed(2)} + $5 + $10 = $${(((25 * (getSteps()[0]?.time || 30)) / 60) + 5 + 10).toFixed(2)}
-
-Total cost is the sum of all individual step costs: ${formatCurrency(itinerary.total_cost)}`}
-            />
-          </div>
-        </div>
-      </CardFooter>
     </Card>
   );
 };

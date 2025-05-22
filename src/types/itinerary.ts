@@ -13,6 +13,8 @@ export interface ItineraryStep {
   hourly_rate?: number;
   tool_wear_cost?: number;
   setup_cost?: number;
+  required_machine_type?: string;
+  recommendation?: string;
 }
 
 export interface ItinerarySteps {

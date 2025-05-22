@@ -18,9 +18,11 @@ import {
 } from "@/components/ui/table";
 import { formatDate, formatCurrency, formatTime } from "@/utils/formatters";
 import { ItineraryStep, Itinerary } from "@/types/itinerary";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ItineraryCardProps {
   itinerary: Itinerary | null;
@@ -78,6 +80,7 @@ export const ItineraryCard = ({
                 <TableHead>Tool</TableHead>
                 <TableHead>Time (min)</TableHead>
                 <TableHead>Cost</TableHead>
+                <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -86,14 +89,53 @@ export const ItineraryCard = ({
                   <TableRow key={index} className={step.unservable ? "bg-red-50" : ""}>
                     <TableCell>{index + 1}</TableCell>
                     <TableCell>{step.description || 'N/A'}</TableCell>
-                    <TableCell>{step.machine_name || 'Unknown Machine'}</TableCell>
-                    <TableCell>{step.tool_name || 'Unknown Tool'}</TableCell>
+                    <TableCell>
+                      {step.machine_name || (step.unservable ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="outline" className="bg-red-50 text-red-500 border-red-300 flex items-center gap-1">
+                                <AlertCircle className="h-3 w-3" /> Missing
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p><strong>Required:</strong> {step.required_machine_type || "Unknown machine type"}</p>
+                              {step.recommendation && <p className="mt-1"><strong>Recommendation:</strong> {step.recommendation}</p>}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : 'Unknown Machine')}
+                    </TableCell>
+                    <TableCell>
+                      {step.tool_name || (step.machine_id && !step.tooling_id ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-300 flex items-center gap-1">
+                                <Info className="h-3 w-3" /> Missing
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>The appropriate tool is not available for this operation.</p>
+                              {step.recommendation && <p className="mt-1"><strong>Recommendation:</strong> {step.recommendation}</p>}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : 'N/A')}
+                    </TableCell>
                     <TableCell>{step.time || 'N/A'}</TableCell>
                     <TableCell>{formatCurrency(step.cost || 0)}</TableCell>
+                    <TableCell>
+                      {step.unservable ? (
+                        <Badge variant="destructive">Unservable</Badge>
+                      ) : (
+                        <Badge variant="success" className="bg-green-100 text-green-700 hover:bg-green-200">Servable</Badge>
+                      )}
+                    </TableCell>
                   </TableRow>
                 )) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-gray-500">
+                    <TableCell colSpan={7} className="text-center text-gray-500">
                       No steps available in the itinerary data
                     </TableCell>
                   </TableRow>
@@ -115,6 +157,7 @@ export const ItineraryCard = ({
           <Alert className="mt-4" variant="destructive">
             <AlertDescription>
               Some operations cannot be serviced with the available machines and tooling.
+              Review the recommendations in the table for purchasing suggestions.
             </AlertDescription>
           </Alert>
         )}

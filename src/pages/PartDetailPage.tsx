@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -100,7 +101,9 @@ const PartDetailPage = () => {
                 tooling_id: step.tooling_id,
                 time: step.time || 0,
                 cost: step.cost || 0,
-                unservable: step.unservable || false
+                unservable: step.unservable || false,
+                required_machine_type: step.required_machine_type || null,
+                recommendation: step.recommendation || null
               })),
               total_cost: stepsObj.reduce((sum, step) => sum + (step.cost || 0), 0)
             };
@@ -113,7 +116,9 @@ const PartDetailPage = () => {
                 tooling_id: step.tooling_id,
                 time: step.time || 0,
                 cost: step.cost || 0,
-                unservable: step.unservable || false
+                unservable: step.unservable || false,
+                required_machine_type: step.required_machine_type || null,
+                recommendation: step.recommendation || null
               })),
               total_cost: stepsObj.total_cost || stepsObj.steps.reduce((sum, step) => sum + (step.cost || 0), 0)
             };
@@ -166,7 +171,9 @@ const PartDetailPage = () => {
               tool_name: toolData?.tool_name || step.tool_name || step.tooling_id,
               hourly_rate: 25, // Example default value
               tool_wear_cost: 5, // Example default value
-              setup_cost: 10 // Example default value
+              setup_cost: 10, // Example default value
+              required_machine_type: step.required_machine_type || (step.unservable ? "Required machine type not specified" : null),
+              recommendation: step.recommendation || null
             };
           })
         );

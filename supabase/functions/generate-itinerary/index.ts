@@ -127,12 +127,77 @@ serve(async (req) => {
       });
     }
 
+    // Organize machines by type for easier matching
+    const machinesByType = machines.reduce((acc, machine) => {
+      if (!acc[machine.type]) {
+        acc[machine.type] = [];
+      }
+      acc[machine.type].push(machine);
+      return acc;
+    }, {});
+
     // Prepare prompt for OpenAI based on available data
     let prompt;
     if (svgContent) {
-      prompt = `Given these 2D vectors ${JSON.stringify(svgContent)}, shop machines ${JSON.stringify(machines)}, tooling ${JSON.stringify(tooling)}, and materials ${JSON.stringify(materials)}, identify machining features (pockets, holes, slots), then plan ordered machining steps. Return ONLY valid JSON with a "steps" array of objects, where each object has: "description", "machine_id", "tooling_id", "time" (in minutes), and "cost" (numeric) properties.`;
+      prompt = `Given these 2D vectors ${JSON.stringify(svgContent)}, analyze and identify the required machining operations. For each operation, determine if we have a suitable machine and tool from our available equipment:
+
+AVAILABLE MACHINES:
+${JSON.stringify(machines)}
+
+AVAILABLE TOOLS:
+${JSON.stringify(tooling)}
+
+AVAILABLE MATERIALS:
+${JSON.stringify(materials)}
+
+For each machining step:
+1. Identify the required machine type (mill, lathe, drill press, etc.)
+2. Choose the most appropriate machine from our inventory
+3. Choose the most appropriate tool from our inventory
+4. If we don't have a suitable machine or tool:
+   a. Mark the step as unservable
+   b. Specify what type of machine would be required (e.g., "requires CNC mill")
+   c. Provide a recommendation on what to purchase
+
+Return ONLY valid JSON with a "steps" array of objects, where each object has:
+- "description": detailed description of the machining step
+- "machine_id": ID of selected machine (or null if unavailable)
+- "tooling_id": ID of selected tool (or null if unavailable)
+- "time": estimated time in minutes
+- "cost": calculated cost
+- "unservable": boolean indicating if we can't perform this step
+- "required_machine_type": machine type needed if unavailable
+- "recommendation": purchase recommendation if needed`;
     } else {
-      prompt = `Given these machines ${JSON.stringify(machines)}, tooling ${JSON.stringify(tooling)}, and material ${JSON.stringify(materials)}, plan a sequence of machining steps for part with URL ${part.file_url || 'No file URL available'}. Return ONLY valid JSON with a "steps" array of objects, where each object has: "description", "machine_id", "tooling_id", "time" (in minutes), and "cost" (numeric) properties.`;
+      prompt = `Given part with URL ${part.file_url || 'No file URL available'}, plan a sequence of machining steps. For each step, determine if we have a suitable machine and tool from our equipment:
+
+AVAILABLE MACHINES:
+${JSON.stringify(machines)}
+
+AVAILABLE TOOLS:
+${JSON.stringify(tooling)}
+
+AVAILABLE MATERIALS:
+${JSON.stringify(materials)}
+
+For each machining step:
+1. Identify the required machine type (mill, lathe, drill press, etc.)
+2. Choose the most appropriate machine from our inventory
+3. Choose the most appropriate tool from our inventory
+4. If we don't have a suitable machine or tool:
+   a. Mark the step as unservable
+   b. Specify what type of machine would be required (e.g., "requires CNC mill")
+   c. Provide a recommendation on what to purchase
+
+Return ONLY valid JSON with a "steps" array of objects, where each object has:
+- "description": detailed description of the machining step
+- "machine_id": ID of selected machine (or null if unavailable)
+- "tooling_id": ID of selected tool (or null if unavailable)
+- "time": estimated time in minutes
+- "cost": calculated cost
+- "unservable": boolean indicating if we can't perform this step
+- "required_machine_type": machine type needed if unavailable
+- "recommendation": purchase recommendation if needed`;
     }
 
     // Call OpenAI API
@@ -147,7 +212,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are a CNC machining expert tasked with planning machining operations. Return ONLY valid JSON with a "steps" array of objects, where each object has: "description", "machine_id", "tooling_id", "time", and "cost" properties. Do NOT include markdown formatting or explanations.'
+            content: 'You are a CNC machining expert tasked with planning machining operations. You carefully analyze each step and make sure to match with appropriate machinery and tooling. If a required machine or tool is unavailable, you provide specific recommendations. Return ONLY valid JSON with no markdown formatting or explanations.'
           },
           {
             role: 'user',
@@ -237,7 +302,9 @@ serve(async (req) => {
             tooling_id: step.tooling_id,
             time: step.estimated_time || step.time || 0,
             cost: step.cost || 0,
-            unservable: step.status === "unservable" || false
+            unservable: step.status === "unservable" || step.unservable || false,
+            required_machine_type: step.required_machine_type || null,
+            recommendation: step.recommendation || null
           })),
           total_cost: itinerary.machining_steps.reduce((sum, step) => sum + (parseFloat(step.cost) || 0), 0)
         };
@@ -254,7 +321,9 @@ serve(async (req) => {
               tooling_id: step.tooling_id || null,
               time: step.time || 0,
               cost: step.cost || 0,
-              unservable: step.unservable || false
+              unservable: step.unservable || false,
+              required_machine_type: step.required_machine_type || null,
+              recommendation: step.recommendation || null
             })),
             total_cost: itinerary.reduce((sum, step) => sum + (parseFloat(step.cost) || 0), 0)
           };
@@ -285,7 +354,9 @@ serve(async (req) => {
         tooling_id: step.tooling_id || null,
         time: typeof step.time === 'string' ? parseFloat(step.time) : (step.time || 0),
         cost: typeof step.cost === 'string' ? parseFloat(step.cost) : (step.cost || 0),
-        unservable: step.unservable || false
+        unservable: step.unservable || false,
+        required_machine_type: step.required_machine_type || (step.unservable ? "Unknown machine type" : null),
+        recommendation: step.recommendation || (step.unservable ? "Additional equipment needed" : null)
       }));
 
       // Recalculate total cost

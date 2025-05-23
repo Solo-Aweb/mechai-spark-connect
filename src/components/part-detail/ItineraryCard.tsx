@@ -20,7 +20,7 @@ import { formatDate, formatCurrency, formatTime } from "@/utils/formatters";
 import { ItineraryStep, Itinerary } from "@/types/itinerary";
 import { Loader2, AlertCircle, Info, ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ItineraryCardProps {
@@ -106,38 +106,38 @@ export const ItineraryCard = ({
           <div className="font-medium">Machine:</div>
           <div>
             {step.machine_name || (step.unservable ? (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge variant="outline" className="bg-red-50 text-red-500 border-red-300 flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" /> Missing
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
+              <HoverCard>
+                <HoverCardTrigger asChild>
+                  <Badge variant="outline" className="bg-red-50 text-red-500 border-red-300 flex items-center gap-1 cursor-help">
+                    <AlertCircle className="h-3 w-3" /> Missing
+                  </Badge>
+                </HoverCardTrigger>
+                <HoverCardContent className="w-80">
+                  <div className="space-y-1">
                     <p><strong>Required:</strong> {step.required_machine_type || "Unknown machine type"}</p>
-                    {step.recommendation && <p className="mt-1"><strong>Recommendation:</strong> {step.recommendation}</p>}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+                    {step.recommendation && <p><strong>Recommendation:</strong> {step.recommendation}</p>}
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
             ) : 'Unknown Machine')}
           </div>
           
           <div className="font-medium">Tool:</div>
           <div>
             {step.tool_name || (step.machine_id && !step.tooling_id ? (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-300 flex items-center gap-1">
-                      <Info className="h-3 w-3" /> Missing
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent>
+              <HoverCard>
+                <HoverCardTrigger asChild>
+                  <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-300 flex items-center gap-1 cursor-help">
+                    <Info className="h-3 w-3" /> Missing
+                  </Badge>
+                </HoverCardTrigger>
+                <HoverCardContent className="w-80">
+                  <div className="space-y-1">
                     <p>The appropriate tool is not available for this operation.</p>
-                    {step.recommendation && <p className="mt-1"><strong>Recommendation:</strong> {step.recommendation}</p>}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+                    {step.recommendation && <p><strong>Recommendation:</strong> {step.recommendation}</p>}
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
             ) : 'N/A')}
           </div>
           
@@ -224,53 +224,51 @@ export const ItineraryCard = ({
                         </div>
                         {step.setup_description && (
                           <div className="mt-2">
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 cursor-help">
-                                    Setup details
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent side="top" align="start" className="max-w-md p-2 bg-white text-sm">
-                                  {step.setup_description}
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <HoverCard>
+                              <HoverCardTrigger asChild>
+                                <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 cursor-help">
+                                  Setup details
+                                </Badge>
+                              </HoverCardTrigger>
+                              <HoverCardContent className="w-96 p-3">
+                                <p className="text-sm">{step.setup_description}</p>
+                              </HoverCardContent>
+                            </HoverCard>
                           </div>
                         )}
                       </TableCell>
                       <TableCell>
                         {step.machine_name || (step.unservable ? (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge variant="outline" className="bg-red-50 text-red-500 border-red-300 flex items-center gap-1">
-                                  <AlertCircle className="h-3 w-3" /> Missing
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="max-w-xs p-2 bg-white text-sm">
+                          <HoverCard>
+                            <HoverCardTrigger asChild>
+                              <Badge variant="outline" className="bg-red-50 text-red-500 border-red-300 flex items-center gap-1 cursor-help">
+                                <AlertCircle className="h-3 w-3" /> Missing
+                              </Badge>
+                            </HoverCardTrigger>
+                            <HoverCardContent className="w-80">
+                              <div className="space-y-1">
                                 <p><strong>Required:</strong> {step.required_machine_type || "Unknown machine type"}</p>
-                                {step.recommendation && <p className="mt-1"><strong>Recommendation:</strong> {step.recommendation}</p>}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                                {step.recommendation && <p><strong>Recommendation:</strong> {step.recommendation}</p>}
+                              </div>
+                            </HoverCardContent>
+                          </HoverCard>
                         ) : 'Unknown Machine')}
                       </TableCell>
                       <TableCell>
                         {step.tool_name || (step.machine_id && !step.tooling_id ? (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-300 flex items-center gap-1">
-                                  <Info className="h-3 w-3" /> Missing
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="max-w-xs p-2 bg-white text-sm">
+                          <HoverCard>
+                            <HoverCardTrigger asChild>
+                              <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-300 flex items-center gap-1 cursor-help">
+                                <Info className="h-3 w-3" /> Missing
+                              </Badge>
+                            </HoverCardTrigger>
+                            <HoverCardContent className="w-80">
+                              <div className="space-y-1">
                                 <p>The appropriate tool is not available for this operation.</p>
-                                {step.recommendation && <p className="mt-1"><strong>Recommendation:</strong> {step.recommendation}</p>}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                                {step.recommendation && <p><strong>Recommendation:</strong> {step.recommendation}</p>}
+                              </div>
+                            </HoverCardContent>
+                          </HoverCard>
                         ) : 'N/A')}
                       </TableCell>
                       <TableCell>{step.time || 'N/A'}</TableCell>
@@ -335,4 +333,3 @@ export const ItineraryCard = ({
     </Card>
   );
 };
-

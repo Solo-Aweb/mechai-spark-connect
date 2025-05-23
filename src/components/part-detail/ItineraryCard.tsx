@@ -101,7 +101,15 @@ export const ItineraryCard = ({
         </div>
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div className="font-medium">Operation:</div>
-          <div>{step.description || 'N/A'}</div>
+          <div>
+            {step.description || 'N/A'}
+            {step.setup_description && (
+              <div className="mt-2 bg-amber-50 p-2 rounded text-amber-800 text-xs border border-amber-200">
+                <div className="font-bold mb-1">Setup:</div>
+                {step.setup_description}
+              </div>
+            )}
+          </div>
           
           <div className="font-medium">Machine:</div>
           <div>
@@ -151,15 +159,6 @@ export const ItineraryCard = ({
             <>
               <div className="font-medium">Fixturing:</div>
               <div>{step.fixture_requirements}</div>
-            </>
-          )}
-
-          {step.setup_description && (
-            <>
-              <div className="font-medium col-span-2 mt-2 text-amber-800">Setup:</div>
-              <div className="col-span-2 bg-amber-50 p-2 rounded text-amber-800 text-xs">
-                {step.setup_description}
-              </div>
             </>
           )}
         </div>
@@ -223,17 +222,9 @@ export const ItineraryCard = ({
                           {step.description || 'N/A'}
                         </div>
                         {step.setup_description && (
-                          <div className="mt-2">
-                            <HoverCard>
-                              <HoverCardTrigger asChild>
-                                <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 cursor-help">
-                                  Setup details
-                                </Badge>
-                              </HoverCardTrigger>
-                              <HoverCardContent className="w-96 p-3">
-                                <p className="text-sm">{step.setup_description}</p>
-                              </HoverCardContent>
-                            </HoverCard>
+                          <div className="mt-2 bg-amber-50 p-2 rounded text-amber-800 text-xs border border-amber-200">
+                            <div className="font-bold mb-1">Setup:</div>
+                            {step.setup_description}
                           </div>
                         )}
                       </TableCell>

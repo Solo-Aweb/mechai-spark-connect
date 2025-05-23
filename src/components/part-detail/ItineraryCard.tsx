@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { formatDate, formatCurrency, formatTime } from "@/utils/formatters";
 import { ItineraryStep, Itinerary } from "@/types/itinerary";
-import { Loader2, AlertCircle, Info, ShoppingCart as ShoppingCartIcon } from "lucide-react";
+import { Loader2, AlertCircle, Info, ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -231,8 +231,8 @@ export const ItineraryCard = ({
                                     Setup details
                                   </Badge>
                                 </TooltipTrigger>
-                                <TooltipContent className="max-w-md">
-                                  <p>{step.setup_description}</p>
+                                <TooltipContent side="top" align="start" className="max-w-md p-2 bg-white text-sm">
+                                  {step.setup_description}
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -248,7 +248,7 @@ export const ItineraryCard = ({
                                   <AlertCircle className="h-3 w-3" /> Missing
                                 </Badge>
                               </TooltipTrigger>
-                              <TooltipContent className="max-w-xs">
+                              <TooltipContent side="top" className="max-w-xs p-2 bg-white text-sm">
                                 <p><strong>Required:</strong> {step.required_machine_type || "Unknown machine type"}</p>
                                 {step.recommendation && <p className="mt-1"><strong>Recommendation:</strong> {step.recommendation}</p>}
                               </TooltipContent>
@@ -265,7 +265,7 @@ export const ItineraryCard = ({
                                   <Info className="h-3 w-3" /> Missing
                                 </Badge>
                               </TooltipTrigger>
-                              <TooltipContent>
+                              <TooltipContent side="top" className="max-w-xs p-2 bg-white text-sm">
                                 <p>The appropriate tool is not available for this operation.</p>
                                 {step.recommendation && <p className="mt-1"><strong>Recommendation:</strong> {step.recommendation}</p>}
                               </TooltipContent>
@@ -317,7 +317,7 @@ export const ItineraryCard = ({
         {recommendations.length > 0 && (
           <div className="mt-6 border p-4 rounded-md bg-amber-50">
             <h3 className="text-lg font-medium flex items-center gap-2 mb-3">
-              <ShoppingCartIcon className="h-5 w-5 text-amber-600" /> 
+              <ShoppingCart className="h-5 w-5 text-amber-600" /> 
               Purchasing Recommendations
             </h3>
             <div className="space-y-3">
@@ -335,3 +335,4 @@ export const ItineraryCard = ({
     </Card>
   );
 };
+

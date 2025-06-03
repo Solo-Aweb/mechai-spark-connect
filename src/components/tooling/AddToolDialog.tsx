@@ -96,32 +96,13 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
     },
   });
 
-  // Query to fetch tool types - Enhanced with detailed debugging
+  // Query to fetch tool types
   const { data: toolTypes, isLoading: isLoadingToolTypes, error: toolTypesError } = useQuery({
     queryKey: ["tool-types", selectedMachineType],
     queryFn: async () => {
       try {
-        console.log("Fetching tool types for machine type:", selectedMachineType);
+        console.log("AddDialog - Fetching tool types for machine type:", selectedMachineType);
         
-        // First, let's get all tool types to see what's available
-        const { data: allToolTypes, error: allError } = await supabase
-          .from("tool_types")
-          .select("*")
-          .order("name");
-
-        console.log("All tool types in database:", allToolTypes);
-        
-        // Log the unique machine types to see what we have
-        if (allToolTypes) {
-          const uniqueMachineTypes = [...new Set(allToolTypes.map(t => t.machine_type))];
-          console.log("Available machine types in tool_types:", uniqueMachineTypes);
-        }
-
-        if (allError) {
-          console.error("Error fetching all tool types:", allError);
-        }
-
-        // Now get filtered tool types
         let query = supabase
           .from("tool_types")
           .select("*")
@@ -133,50 +114,47 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
 
         const { data, error } = await query;
 
-        console.log("Filtered tool types data:", data);
-        console.log("Selected machine type:", selectedMachineType);
+        console.log("AddDialog - Tool types data:", data);
+        console.log("AddDialog - Selected machine type:", selectedMachineType);
 
         if (error) {
-          console.error("Error fetching tool types:", error);
+          console.error("AddDialog - Error fetching tool types:", error);
           throw new Error(error.message);
         }
         
         // Transform the data to match our ToolType interface
-        const transformedData = data?.map(item => {
-          console.log("Transforming tool type item:", item);
-          return {
-            id: item.id,
-            name: item.name,
-            machine_type: item.machine_type,
-            param_schema: item.param_schema as {
-              fields: Array<{
-                key: string;
-                label: string;
-                type: "number" | "text";
-              }>;
-            }
-          };
-        }) || [];
+        const transformedData = data?.map(item => ({
+          id: item.id,
+          name: item.name,
+          machine_type: item.machine_type,
+          param_schema: item.param_schema as {
+            fields: Array<{
+              key: string;
+              label: string;
+              type: "number" | "text";
+            }>;
+          }
+        })) || [];
         
-        console.log("Transformed tool types:", transformedData);
+        console.log("AddDialog - Transformed tool types:", transformedData);
         return transformedData;
       } catch (error) {
-        console.error("Tool types query error:", error);
+        console.error("AddDialog - Tool types query error:", error);
         throw error;
       }
     },
     enabled: !!selectedMachineType,
   });
 
-  // Enhanced debugging for machine type changes
+  // Update machine type when machine selection changes
   useEffect(() => {
     const machineId = form.watch("machine_id");
-    console.log("Machine ID changed:", machineId);
+    console.log("AddDialog - Machine ID changed:", machineId);
     if (machineId && machines) {
       const selectedMachine = machines.find(m => m.id === machineId);
-      console.log("Selected machine:", selectedMachine);
+      console.log("AddDialog - Selected machine:", selectedMachine);
       if (selectedMachine) {
-        console.log("Setting machine type to:", selectedMachine.type);
+        console.log("AddDialog - Setting machine type to:", selectedMachine.type);
         setSelectedMachineType(selectedMachine.type);
         // Reset tool type selection when machine changes
         form.setValue("tool_type_id", "");
@@ -200,7 +178,7 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
   const addToolMutation = useMutation({
     mutationFn: async (values: ToolFormValues) => {
       try {
-        console.log("Adding new tool with values:", values);
+        console.log("AddDialog - Adding new tool with values:", values);
         
         const toolData = {
           tool_name: values.tool_name,
@@ -221,14 +199,14 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
           .select();
 
         if (error) {
-          console.error("Error adding tool:", error);
+          console.error("AddDialog - Error adding tool:", error);
           throw new Error(error.message);
         }
         
-        console.log("Tool added successfully:", data);
+        console.log("AddDialog - Tool added successfully:", data);
         return data;
       } catch (error) {
-        console.error("Mutation error:", error);
+        console.error("AddDialog - Mutation error:", error);
         throw error;
       }
     },
@@ -241,13 +219,13 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
       queryClient.invalidateQueries({ queryKey: ["tools"] });
     },
     onError: (error: Error) => {
-      console.error("Mutation onError handler:", error);
+      console.error("AddDialog - Mutation onError handler:", error);
       toast.error(`Error adding tool: ${error.message}`);
     },
   });
 
   const onSubmit = (values: ToolFormValues) => {
-    console.log("Form submitted with values:", values);
+    console.log("AddDialog - Form submitted with values:", values);
     addToolMutation.mutate(values);
   };
 

@@ -114,7 +114,7 @@ export function EditToolDialog({ isOpen, setIsOpen, tool, machines }: EditToolDi
     },
   });
 
-  // Query to fetch tool types - Enhanced with debugging
+  // Query to fetch tool types
   const { data: toolTypes, isLoading: isLoadingToolTypes, error: toolTypesError } = useQuery({
     queryKey: ["tool-types", selectedMachineType],
     queryFn: async () => {

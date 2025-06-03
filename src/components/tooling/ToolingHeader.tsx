@@ -13,6 +13,7 @@ import {
 type Machine = {
   id: string;
   name: string;
+  type: string;
 };
 
 type ToolingHeaderProps = {
@@ -46,7 +47,7 @@ export function ToolingHeader({
             <SelectItem value="all">All Machines</SelectItem>
             {machines?.map((machine) => (
               <SelectItem key={machine.id} value={machine.id}>
-                {machine.name}
+                {machine.name} ({machine.type})
               </SelectItem>
             ))}
           </SelectContent>

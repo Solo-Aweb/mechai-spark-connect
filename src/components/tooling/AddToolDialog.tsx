@@ -1,4 +1,3 @@
-
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -97,49 +96,81 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
     },
   });
 
-  // Query to fetch tool types
-  const { data: toolTypes } = useQuery({
+  // Query to fetch tool types - Enhanced with better debugging
+  const { data: toolTypes, isLoading: isLoadingToolTypes, error: toolTypesError } = useQuery({
     queryKey: ["tool-types", selectedMachineType],
     queryFn: async () => {
-      let query = supabase
-        .from("tool_types")
-        .select("*")
-        .order("name");
+      try {
+        console.log("Fetching tool types for machine type:", selectedMachineType);
+        
+        // First, let's get all tool types to see what's available
+        const { data: allToolTypes, error: allError } = await supabase
+          .from("tool_types")
+          .select("*")
+          .order("name");
 
-      if (selectedMachineType) {
-        query = query.eq("machine_type", selectedMachineType);
-      }
+        console.log("All tool types in database:", allToolTypes);
 
-      const { data, error } = await query;
-
-      if (error) {
-        console.error("Error fetching tool types:", error);
-        throw new Error(error.message);
-      }
-      
-      // Transform the data to match our ToolType interface
-      return data?.map(item => ({
-        id: item.id,
-        name: item.name,
-        machine_type: item.machine_type,
-        param_schema: item.param_schema as {
-          fields: Array<{
-            key: string;
-            label: string;
-            type: "number" | "text";
-          }>;
+        if (allError) {
+          console.error("Error fetching all tool types:", allError);
         }
-      })) || [];
+
+        // Now get filtered tool types
+        let query = supabase
+          .from("tool_types")
+          .select("*")
+          .order("name");
+
+        if (selectedMachineType) {
+          query = query.eq("machine_type", selectedMachineType);
+        }
+
+        const { data, error } = await query;
+
+        console.log("Filtered tool types data:", data);
+        console.log("Selected machine type:", selectedMachineType);
+
+        if (error) {
+          console.error("Error fetching tool types:", error);
+          throw new Error(error.message);
+        }
+        
+        // Transform the data to match our ToolType interface
+        const transformedData = data?.map(item => {
+          console.log("Transforming tool type item:", item);
+          return {
+            id: item.id,
+            name: item.name,
+            machine_type: item.machine_type,
+            param_schema: item.param_schema as {
+              fields: Array<{
+                key: string;
+                label: string;
+                type: "number" | "text";
+              }>;
+            }
+          };
+        }) || [];
+        
+        console.log("Transformed tool types:", transformedData);
+        return transformedData;
+      } catch (error) {
+        console.error("Tool types query error:", error);
+        throw error;
+      }
     },
     enabled: !!selectedMachineType,
   });
 
-  // Update machine type when machine selection changes
+  // Enhanced debugging for machine type changes
   useEffect(() => {
     const machineId = form.watch("machine_id");
+    console.log("Machine ID changed:", machineId);
     if (machineId && machines) {
       const selectedMachine = machines.find(m => m.id === machineId);
+      console.log("Selected machine:", selectedMachine);
       if (selectedMachine) {
+        console.log("Setting machine type to:", selectedMachine.type);
         setSelectedMachineType(selectedMachine.type);
         // Reset tool type selection when machine changes
         form.setValue("tool_type_id", "");
@@ -277,7 +308,13 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a tool type" />
+                          <SelectValue placeholder={
+                            isLoadingToolTypes 
+                              ? "Loading tool types..." 
+                              : toolTypes?.length === 0 
+                                ? `No tool types found for ${selectedMachineType}` 
+                                : "Select a tool type"
+                          } />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -286,8 +323,18 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
                             {toolType.name}
                           </SelectItem>
                         ))}
+                        {toolTypes?.length === 0 && (
+                          <SelectItem value="" disabled>
+                            No tool types available for {selectedMachineType}
+                          </SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
+                    {toolTypesError && (
+                      <FormDescription className="text-destructive">
+                        Error loading tool types: {toolTypesError.message}
+                      </FormDescription>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}

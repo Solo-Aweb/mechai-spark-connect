@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -115,39 +114,51 @@ export function EditToolDialog({ isOpen, setIsOpen, tool, machines }: EditToolDi
     },
   });
 
-  // Query to fetch tool types
-  const { data: toolTypes } = useQuery({
+  // Query to fetch tool types - Enhanced with better debugging
+  const { data: toolTypes, isLoading: isLoadingToolTypes, error: toolTypesError } = useQuery({
     queryKey: ["tool-types", selectedMachineType],
     queryFn: async () => {
-      let query = supabase
-        .from("tool_types")
-        .select("*")
-        .order("name");
+      try {
+        console.log("EditDialog - Fetching tool types for machine type:", selectedMachineType);
+        
+        let query = supabase
+          .from("tool_types")
+          .select("*")
+          .order("name");
 
-      if (selectedMachineType) {
-        query = query.eq("machine_type", selectedMachineType);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error("Error fetching tool types:", error);
-        throw new Error(error.message);
-      }
-      
-      // Transform the data to match our ToolType interface
-      return data?.map(item => ({
-        id: item.id,
-        name: item.name,
-        machine_type: item.machine_type,
-        param_schema: item.param_schema as {
-          fields: Array<{
-            key: string;
-            label: string;
-            type: "number" | "text";
-          }>;
+        if (selectedMachineType) {
+          query = query.eq("machine_type", selectedMachineType);
         }
-      })) || [];
+
+        const { data, error } = await query;
+
+        console.log("EditDialog - Tool types data:", data);
+
+        if (error) {
+          console.error("EditDialog - Error fetching tool types:", error);
+          throw new Error(error.message);
+        }
+        
+        // Transform the data to match our ToolType interface
+        const transformedData = data?.map(item => ({
+          id: item.id,
+          name: item.name,
+          machine_type: item.machine_type,
+          param_schema: item.param_schema as {
+            fields: Array<{
+              key: string;
+              label: string;
+              type: "number" | "text";
+            }>;
+          }
+        })) || [];
+        
+        console.log("EditDialog - Transformed tool types:", transformedData);
+        return transformedData;
+      } catch (error) {
+        console.error("EditDialog - Tool types query error:", error);
+        throw error;
+      }
     },
     enabled: !!selectedMachineType,
   });
@@ -304,7 +315,13 @@ export function EditToolDialog({ isOpen, setIsOpen, tool, machines }: EditToolDi
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a tool type" />
+                          <SelectValue placeholder={
+                            isLoadingToolTypes 
+                              ? "Loading tool types..." 
+                              : toolTypes?.length === 0 
+                                ? `No tool types found for ${selectedMachineType}` 
+                                : "Select a tool type"
+                          } />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -313,8 +330,18 @@ export function EditToolDialog({ isOpen, setIsOpen, tool, machines }: EditToolDi
                             {toolType.name}
                           </SelectItem>
                         ))}
+                        {toolTypes?.length === 0 && (
+                          <SelectItem value="" disabled>
+                            No tool types available for {selectedMachineType}
+                          </SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
+                    {toolTypesError && (
+                      <FormDescription className="text-destructive">
+                        Error loading tool types: {toolTypesError.message}
+                      </FormDescription>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}

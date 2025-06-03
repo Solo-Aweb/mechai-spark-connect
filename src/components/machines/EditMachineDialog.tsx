@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,11 +24,14 @@ import {
   FormMessage,
   FormDescription,
 } from "@/components/ui/form";
+import { MachineTypeSelect, MACHINE_TYPES } from "@/components/machines/MachineTypeSelect";
 
-// Form schema for editing a machine
+// Form schema for editing a machine - updated to use enum for type
 const machineFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  type: z.string().min(1, "Type is required"),
+  type: z.enum(MACHINE_TYPES as [string, ...string[]], {
+    required_error: "Please select a machine type",
+  }),
   axes: z.coerce.number().int().positive("Must be a positive integer"),
   spindle_rpm: z.coerce.number().int().positive("Must be a positive integer"),
   x_range: z.coerce.number().positive("Must be a positive number"),
@@ -69,7 +73,7 @@ export function EditMachineDialog({ isOpen, setIsOpen, machine }: EditMachineDia
     resolver: zodResolver(machineFormSchema),
     defaultValues: machine ? {
       name: machine.name,
-      type: machine.type,
+      type: machine.type as any,
       axes: machine.axes,
       spindle_rpm: machine.spindle_rpm,
       x_range: machine.x_range,
@@ -80,7 +84,7 @@ export function EditMachineDialog({ isOpen, setIsOpen, machine }: EditMachineDia
       operating_cost: machine.operating_cost || 0,
     } : {
       name: "",
-      type: "",
+      type: undefined,
       axes: 3,
       spindle_rpm: 10000,
       x_range: 0,
@@ -97,7 +101,7 @@ export function EditMachineDialog({ isOpen, setIsOpen, machine }: EditMachineDia
     if (machine) {
       form.reset({
         name: machine.name,
-        type: machine.type,
+        type: machine.type as any,
         axes: machine.axes,
         spindle_rpm: machine.spindle_rpm,
         x_range: machine.x_range,
@@ -179,7 +183,11 @@ export function EditMachineDialog({ isOpen, setIsOpen, machine }: EditMachineDia
                 <FormItem>
                   <FormLabel>Machine Type</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Mill, Lathe, Router" {...field} />
+                    <MachineTypeSelect
+                      value={field.value || ""}
+                      onValueChange={field.onChange}
+                      placeholder="Select machine type"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

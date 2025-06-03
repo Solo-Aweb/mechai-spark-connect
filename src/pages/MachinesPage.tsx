@@ -37,6 +37,7 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 import { EditMachineDialog } from "@/components/machines/EditMachineDialog";
+import { MachineTypeSelect, MACHINE_TYPES } from "@/components/machines/MachineTypeSelect";
 
 // Define the Machine type based on the database schema
 type Machine = {
@@ -54,10 +55,12 @@ type Machine = {
   created_at: string;
 };
 
-// Form schema for adding a new machine
+// Form schema for adding a new machine - updated to use enum for type
 const machineFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  type: z.string().min(1, "Type is required"),
+  type: z.enum(MACHINE_TYPES as [string, ...string[]], {
+    required_error: "Please select a machine type",
+  }),
   axes: z.coerce.number().int().positive("Must be a positive integer"),
   spindle_rpm: z.coerce.number().int().positive("Must be a positive integer"),
   x_range: z.coerce.number().positive("Must be a positive number"),
@@ -122,6 +125,7 @@ export default function MachinesPage() {
     onSuccess: () => {
       toast.success("Machine added successfully");
       setIsDialogOpen(false);
+      form.reset();
       queryClient.invalidateQueries({ queryKey: ["machines"] });
     },
     onError: (error: Error) => {
@@ -134,7 +138,7 @@ export default function MachinesPage() {
     resolver: zodResolver(machineFormSchema),
     defaultValues: {
       name: "",
-      type: "",
+      type: undefined,
       axes: 3,
       spindle_rpm: 10000,
       x_range: 0,
@@ -200,7 +204,11 @@ export default function MachinesPage() {
                     <FormItem>
                       <FormLabel>Machine Type</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Mill, Lathe, Router" {...field} />
+                        <MachineTypeSelect
+                          value={field.value || ""}
+                          onValueChange={field.onChange}
+                          placeholder="Select machine type"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

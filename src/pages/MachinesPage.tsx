@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,8 +21,19 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "@/components/ui/sonner";
-import { Plus, Edit } from "lucide-react";
+import { Plus, Edit, Trash2 } from "lucide-react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -95,6 +105,27 @@ export default function MachinesPage() {
     },
   });
 
+  // Mutation to delete a machine
+  const deleteMachineMutation = useMutation({
+    mutationFn: async (machineId: string) => {
+      const { error } = await supabase
+        .from("machines")
+        .delete()
+        .eq("id", machineId);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+    },
+    onSuccess: () => {
+      toast.success("Machine deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ["machines"] });
+    },
+    onError: (error: Error) => {
+      toast.error(`Error deleting machine: ${error.message}`);
+    },
+  });
+
   // Fix the mutation to ensure all required fields are provided
   const addMachineMutation = useMutation({
     mutationFn: async (newMachine: MachineFormValues) => {
@@ -157,6 +188,10 @@ export default function MachinesPage() {
   const handleEditClick = (machine: Machine) => {
     setSelectedMachine(machine);
     setIsEditDialogOpen(true);
+  };
+
+  const handleDeleteClick = (machineId: string) => {
+    deleteMachineMutation.mutate(machineId);
   };
 
   if (error) {
@@ -389,14 +424,42 @@ export default function MachinesPage() {
                   <TableCell>{machine.setup_cost || 'N/A'}</TableCell>
                   <TableCell>{machine.operating_cost || 'N/A'}</TableCell>
                   <TableCell>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleEditClick(machine)}
-                    >
-                      <Edit size={16} className="mr-1" />
-                      Edit
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleEditClick(machine)}
+                      >
+                        <Edit size={16} className="mr-1" />
+                        Edit
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="sm">
+                            <Trash2 size={16} className="mr-1" />
+                            Delete
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. This will permanently delete the machine
+                              "{machine.name}" and all associated data.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteClick(machine.id)}
+                              disabled={deleteMachineMutation.isPending}
+                            >
+                              {deleteMachineMutation.isPending ? "Deleting..." : "Delete"}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

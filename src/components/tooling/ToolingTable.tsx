@@ -10,7 +10,21 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Edit, Trash2 } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/sonner";
 
 type Tool = {
   id: string;
@@ -35,6 +49,33 @@ type ToolingTableProps = {
 };
 
 export function ToolingTable({ tools, isLoadingTools, selectedMachineId, onEditTool }: ToolingTableProps) {
+  const queryClient = useQueryClient();
+
+  // Mutation to delete a tool
+  const deleteToolMutation = useMutation({
+    mutationFn: async (toolId: string) => {
+      const { error } = await supabase
+        .from("tooling")
+        .delete()
+        .eq("id", toolId);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+    },
+    onSuccess: () => {
+      toast.success("Tool deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ["tools"] });
+    },
+    onError: (error: Error) => {
+      toast.error(`Error deleting tool: ${error.message}`);
+    },
+  });
+
+  const handleDeleteTool = (toolId: string) => {
+    deleteToolMutation.mutate(toolId);
+  };
+
   if (isLoadingTools) {
     return (
       <div className="flex justify-center py-8">
@@ -105,14 +146,42 @@ export function ToolingTable({ tools, isLoadingTools, selectedMachineId, onEditT
                 </div>
               </TableCell>
               <TableCell>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onEditTool(tool)}
-                >
-                  <Edit size={16} className="mr-1" />
-                  Edit
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onEditTool(tool)}
+                  >
+                    <Edit size={16} className="mr-1" />
+                    Edit
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm">
+                        <Trash2 size={16} className="mr-1" />
+                        Delete
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete the tool
+                          "{tool.tool_name}" and all associated data.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDeleteTool(tool.id)}
+                          disabled={deleteToolMutation.isPending}
+                        >
+                          {deleteToolMutation.isPending ? "Deleting..." : "Delete"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </TableCell>
             </TableRow>
           ))

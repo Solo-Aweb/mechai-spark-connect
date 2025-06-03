@@ -135,7 +135,19 @@ export function EditToolDialog({ isOpen, setIsOpen, tool, machines }: EditToolDi
         throw new Error(error.message);
       }
       
-      return data as ToolType[];
+      // Transform the data to match our ToolType interface
+      return data?.map(item => ({
+        id: item.id,
+        name: item.name,
+        machine_type: item.machine_type,
+        param_schema: item.param_schema as {
+          fields: Array<{
+            key: string;
+            label: string;
+            type: "number" | "text";
+          }>;
+        }
+      })) || [];
     },
     enabled: !!selectedMachineType,
   });

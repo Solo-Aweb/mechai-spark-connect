@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,20 +14,24 @@ type Tool = {
   id: string;
   tool_name: string;
   machine_id: string;
+  tool_type_id: string | null;
   material: string;
   diameter: number;
   length: number;
   life_remaining: number;
   cost: number | null;
   replacement_cost: number | null;
+  params: Record<string, any> | null;
   created_at: string;
-  machines: { name: string } | null;
+  machines: { name: string; type: string } | null;
+  tool_types?: { name: string } | null;
 };
 
 // Define the Machine type for dropdown selection
 type Machine = {
   id: string;
   name: string;
+  type: string;
 };
 
 export default function ToolingPage() {
@@ -38,7 +41,7 @@ export default function ToolingPage() {
   const [selectedMachineId, setSelectedMachineId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Query to fetch tools - Enhanced error handling
+  // Query to fetch tools - Enhanced to include tool types
   const { data: tools, isLoading: isLoadingTools, isError: isToolsError, refetch: refetchTools } = useQuery({
     queryKey: ["tools", selectedMachineId],
     queryFn: async () => {
@@ -46,7 +49,11 @@ export default function ToolingPage() {
         console.log("Fetching tools with machineId:", selectedMachineId);
         let query = supabase
           .from("tooling")
-          .select("*, machines(name)")
+          .select(`
+            *, 
+            machines(name, type),
+            tool_types(name)
+          `)
           .order("created_at", { ascending: false });
   
         if (selectedMachineId) {
@@ -63,7 +70,7 @@ export default function ToolingPage() {
         }
         
         console.log("Tools data fetched:", data);
-        return data as (Tool & { machines: { name: string } })[];
+        return data as Tool[];
       } catch (error) {
         console.error("Unexpected error fetching tools:", error);
         toast.error("An unexpected error occurred");
@@ -75,7 +82,7 @@ export default function ToolingPage() {
     refetchOnWindowFocus: false,
   });
 
-  // Query to fetch machines for the dropdown - Enhanced error handling
+  // Query to fetch machines for the dropdown - Enhanced to include machine type
   const { 
     data: machines, 
     isLoading: isLoadingMachines,
@@ -88,7 +95,7 @@ export default function ToolingPage() {
         console.log("Fetching machines for dropdown");
         const { data, error } = await supabase
           .from("machines")
-          .select("id, name")
+          .select("id, name, type")
           .order("name");
   
         if (error) {

@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
@@ -30,17 +30,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DynamicParameterFields } from "./DynamicParameterFields";
+import { useState, useEffect } from "react";
 
 // Form schema for adding a new tool
 const toolFormSchema = z.object({
   tool_name: z.string().min(1, "Tool name is required"),
   machine_id: z.string().min(1, "Machine selection is required"),
+  tool_type_id: z.string().min(1, "Tool type selection is required"),
   material: z.string().min(1, "Material is required"),
   diameter: z.coerce.number().positive("Diameter must be positive"),
   length: z.coerce.number().positive("Length must be positive"),
   life_remaining: z.coerce.number().min(0, "Life remaining cannot be negative"),
   cost: z.coerce.number().min(0, "Tool cost cannot be negative"),
   replacement_cost: z.coerce.number().min(0, "Replacement cost cannot be negative"),
+  params: z.record(z.any()).optional(),
 });
 
 type ToolFormValues = z.infer<typeof toolFormSchema>;
@@ -48,7 +52,21 @@ type ToolFormValues = z.infer<typeof toolFormSchema>;
 type Machine = {
   id: string;
   name: string;
+  type: string;
   hourly_rate?: number;
+};
+
+type ToolType = {
+  id: string;
+  name: string;
+  machine_type: string;
+  param_schema: {
+    fields: Array<{
+      key: string;
+      label: string;
+      type: "number" | "text";
+    }>;
+  };
 };
 
 type AddToolDialogProps = {
@@ -59,6 +77,8 @@ type AddToolDialogProps = {
 
 export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProps) {
   const queryClient = useQueryClient();
+  const [selectedMachineType, setSelectedMachineType] = useState<string>("");
+  const [selectedToolType, setSelectedToolType] = useState<ToolType | null>(null);
   
   // Initialize the form
   const form = useForm<ToolFormValues>({
@@ -66,30 +86,84 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
     defaultValues: {
       tool_name: "",
       machine_id: "",
+      tool_type_id: "",
       material: "",
       diameter: 0,
       length: 0,
       life_remaining: 100,
       cost: 0,
       replacement_cost: 0,
+      params: {},
     },
   });
+
+  // Query to fetch tool types
+  const { data: toolTypes } = useQuery({
+    queryKey: ["tool-types", selectedMachineType],
+    queryFn: async () => {
+      let query = supabase
+        .from("tool_types")
+        .select("*")
+        .order("name");
+
+      if (selectedMachineType) {
+        query = query.eq("machine_type", selectedMachineType);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("Error fetching tool types:", error);
+        throw new Error(error.message);
+      }
+      
+      return data as ToolType[];
+    },
+    enabled: !!selectedMachineType,
+  });
+
+  // Update machine type when machine selection changes
+  useEffect(() => {
+    const machineId = form.watch("machine_id");
+    if (machineId && machines) {
+      const selectedMachine = machines.find(m => m.id === machineId);
+      if (selectedMachine) {
+        setSelectedMachineType(selectedMachine.type);
+        // Reset tool type selection when machine changes
+        form.setValue("tool_type_id", "");
+        setSelectedToolType(null);
+      }
+    }
+  }, [form.watch("machine_id"), machines, form]);
+
+  // Update selected tool type when tool type selection changes
+  useEffect(() => {
+    const toolTypeId = form.watch("tool_type_id");
+    if (toolTypeId && toolTypes) {
+      const selectedType = toolTypes.find(t => t.id === toolTypeId);
+      setSelectedToolType(selectedType || null);
+      // Reset params when tool type changes
+      form.setValue("params", {});
+    }
+  }, [form.watch("tool_type_id"), toolTypes, form]);
 
   // Mutation to add a new tool
   const addToolMutation = useMutation({
     mutationFn: async (values: ToolFormValues) => {
       try {
         console.log("Adding new tool with values:", values);
-        // Ensure all required fields are explicitly set
+        
         const toolData = {
           tool_name: values.tool_name,
           machine_id: values.machine_id,
+          tool_type_id: values.tool_type_id,
           material: values.material,
           diameter: values.diameter,
           length: values.length,
           life_remaining: values.life_remaining,
           cost: values.cost,
           replacement_cost: values.replacement_cost,
+          params: values.params || {},
         };
         
         const { data, error } = await supabase
@@ -113,6 +187,8 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
       toast.success("Tool added successfully");
       setIsOpen(false);
       form.reset();
+      setSelectedMachineType("");
+      setSelectedToolType(null);
       queryClient.invalidateQueries({ queryKey: ["tools"] });
     },
     onError: (error: Error) => {
@@ -128,7 +204,7 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New Tool</DialogTitle>
         </DialogHeader>
@@ -147,6 +223,7 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
                 </FormItem>
               )}
             />
+            
             <FormField
               control={form.control}
               name="machine_id"
@@ -165,7 +242,7 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
                     <SelectContent>
                       {machines?.map((machine) => (
                         <SelectItem key={machine.id} value={machine.id}>
-                          {machine.name} {machine.hourly_rate ? `(Rate: $${machine.hourly_rate}/hr)` : ''}
+                          {machine.name} ({machine.type}) {machine.hourly_rate ? `- $${machine.hourly_rate}/hr` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -174,6 +251,37 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
                 </FormItem>
               )}
             />
+
+            {selectedMachineType && (
+              <FormField
+                control={form.control}
+                name="tool_type_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tool Type</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a tool type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {toolTypes?.map((toolType) => (
+                          <SelectItem key={toolType.id} value={toolType.id}>
+                            {toolType.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
             <FormField
               control={form.control}
               name="material"
@@ -187,6 +295,7 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
                 </FormItem>
               )}
             />
+            
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -215,6 +324,7 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
                 )}
               />
             </div>
+            
             <FormField
               control={form.control}
               name="life_remaining"
@@ -228,8 +338,16 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
                 </FormItem>
               )}
             />
+
+            {selectedToolType && (
+              <DynamicParameterFields
+                control={form.control}
+                paramSchema={selectedToolType.param_schema}
+                params={form.watch("params") || {}}
+              />
+            )}
             
-            <h3 className="text-lg font-medium mt-2">Cost Information</h3>
+            <h3 className="text-lg font-medium mt-6">Cost Information</h3>
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}

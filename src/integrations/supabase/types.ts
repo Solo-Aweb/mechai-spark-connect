@@ -143,6 +143,30 @@ export type Database = {
         }
         Relationships: []
       }
+      tool_types: {
+        Row: {
+          created_at: string
+          id: string
+          machine_type: string
+          name: string
+          param_schema: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          machine_type: string
+          name: string
+          param_schema: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          machine_type?: string
+          name?: string
+          param_schema?: Json
+        }
+        Relationships: []
+      }
       tooling: {
         Row: {
           cost: number | null
@@ -153,8 +177,10 @@ export type Database = {
           life_remaining: number
           machine_id: string
           material: string
+          params: Json | null
           replacement_cost: number | null
           tool_name: string
+          tool_type_id: string | null
         }
         Insert: {
           cost?: number | null
@@ -165,8 +191,10 @@ export type Database = {
           life_remaining: number
           machine_id: string
           material: string
+          params?: Json | null
           replacement_cost?: number | null
           tool_name: string
+          tool_type_id?: string | null
         }
         Update: {
           cost?: number | null
@@ -177,8 +205,10 @@ export type Database = {
           life_remaining?: number
           machine_id?: string
           material?: string
+          params?: Json | null
           replacement_cost?: number | null
           tool_name?: string
+          tool_type_id?: string | null
         }
         Relationships: [
           {
@@ -186,6 +216,13 @@ export type Database = {
             columns: ["machine_id"]
             isOneToOne: false
             referencedRelation: "machines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tooling_tool_type_id_fkey"
+            columns: ["tool_type_id"]
+            isOneToOne: false
+            referencedRelation: "tool_types"
             referencedColumns: ["id"]
           },
         ]

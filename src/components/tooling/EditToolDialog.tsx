@@ -114,7 +114,7 @@ export function EditToolDialog({ isOpen, setIsOpen, tool, machines }: EditToolDi
     },
   });
 
-  // Query to fetch tool types - Enhanced with better debugging
+  // Query to fetch tool types - Enhanced with debugging
   const { data: toolTypes, isLoading: isLoadingToolTypes, error: toolTypesError } = useQuery({
     queryKey: ["tool-types", selectedMachineType],
     queryFn: async () => {
@@ -325,13 +325,14 @@ export function EditToolDialog({ isOpen, setIsOpen, tool, machines }: EditToolDi
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {toolTypes?.map((toolType) => (
-                          <SelectItem key={toolType.id} value={toolType.id}>
-                            {toolType.name}
-                          </SelectItem>
-                        ))}
-                        {toolTypes?.length === 0 && (
-                          <SelectItem value="" disabled>
+                        {toolTypes && toolTypes.length > 0 ? (
+                          toolTypes.map((toolType) => (
+                            <SelectItem key={toolType.id} value={toolType.id}>
+                              {toolType.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-options" disabled>
                             No tool types available for {selectedMachineType}
                           </SelectItem>
                         )}

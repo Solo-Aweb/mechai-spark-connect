@@ -96,7 +96,7 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
     },
   });
 
-  // Query to fetch tool types - Enhanced with better debugging
+  // Query to fetch tool types - Enhanced with detailed debugging
   const { data: toolTypes, isLoading: isLoadingToolTypes, error: toolTypesError } = useQuery({
     queryKey: ["tool-types", selectedMachineType],
     queryFn: async () => {
@@ -110,6 +110,12 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
           .order("name");
 
         console.log("All tool types in database:", allToolTypes);
+        
+        // Log the unique machine types to see what we have
+        if (allToolTypes) {
+          const uniqueMachineTypes = [...new Set(allToolTypes.map(t => t.machine_type))];
+          console.log("Available machine types in tool_types:", uniqueMachineTypes);
+        }
 
         if (allError) {
           console.error("Error fetching all tool types:", allError);
@@ -318,13 +324,14 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {toolTypes?.map((toolType) => (
-                          <SelectItem key={toolType.id} value={toolType.id}>
-                            {toolType.name}
-                          </SelectItem>
-                        ))}
-                        {toolTypes?.length === 0 && (
-                          <SelectItem value="" disabled>
+                        {toolTypes && toolTypes.length > 0 ? (
+                          toolTypes.map((toolType) => (
+                            <SelectItem key={toolType.id} value={toolType.id}>
+                              {toolType.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-options" disabled>
                             No tool types available for {selectedMachineType}
                           </SelectItem>
                         )}

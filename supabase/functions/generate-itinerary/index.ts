@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.0';
 
@@ -206,11 +205,11 @@ ${JSON.stringify(toolTypesByMachineType, null, 2)}
 AVAILABLE MATERIALS:
 ${JSON.stringify(materials, null, 2)}
 
-CRITICAL INSTRUCTIONS FOR TOOL VALIDATION:
+CRITICAL INSTRUCTIONS FOR TOOL VALIDATION AND RECOMMENDATIONS:
 1. When selecting a machine, you MUST check if the required tool is actually available for that specific machine
 2. Use the AVAILABLE TOOLS BY MACHINE ID data to verify tool availability for the selected machine
 3. If a tool is not available for the selected machine, you have two options:
-   a. Mark the step as unservable and specify the required tool type
+   a. Mark the step as unservable and specify the required tool type with a specific recommendation
    b. Choose a different machine that has the required tool available
 4. Use EXACT machine names and tool names from the available inventory
 5. For machine_id: use the actual machine ID from the AVAILABLE MACHINES list
@@ -218,12 +217,23 @@ CRITICAL INSTRUCTIONS FOR TOOL VALIDATION:
 7. For machine_name: use the exact "name" field from the machines data
 8. For tool_name: use the exact "tool_name" field from the tooling data
 9. If a required tool type is not available for the selected machine, set tooling_id to null and specify the required tool type
+10. ALWAYS provide a specific tool recommendation using the standard naming convention when a tool is missing
 
 STANDARD MACHINE NAMING CONVENTION:
 - Use these exact machine type names: "Conventional Lathe", "CNC Lathe (Turning Center)", "Swiss-Type Lathe", "Turret Lathe", "Vertical Turret Lathe (VTL)", "Vertical Milling Machine", "Horizontal Milling Machine", "CNC Milling Center (3-axis)", "CNC Milling Center (4-axis)", "CNC Milling Center (5-axis)", "Bed-Type Milling Machine", "Knee-Type Milling Machine", "Gantry (Bridge) Milling Machine", "Drill Press (Bench or Floor)", "Radial Arm Drill", "CNC Drill/Tap Center", "Horizontal Boring Mill", "Vertical Boring Mill", "CNC Boring Machine", "Surface Grinder", "Cylindrical Grinder (OD Grinder)", "Internal Grinder (ID Grinder)", "Centerless Grinder", "Tool & Cutter Grinder", "Creep Feed Grinder", "Wire EDM", "Sinker (Ram) EDM", "Broaching Machine", "Honing Machine", "Lapping Machine", "Laser Cutting Machine", "Waterjet Cutting Machine", "Plasma Cutting Machine", "Ultrasonic Machining Center", "Electrochemical Machining (ECM) Machine", "CNC Router", "Additive/Subtractive Hybrid Machining Center", "3D Printer (for prototyping)", "CNC Laser Engraver"
 
-STANDARD TOOL NAMING CONVENTION:
-- Use these exact tool names based on machine type: "Turning Insert", "Facing Insert", "Boring Bar", "Parting Tool", "Threading Insert", "Grooving Tool", "Endmill", "Face Mill", "Ball Nose Endmill", "Chamfer Mill", "Slot Drill", "T-Slot Cutter", "Fly Cutter", "Drill Bit", "Reamer", "Countersink", "Thread Mill", "Twist Drill", "Center Drill", "Step Drill", "Forstner Bit", "Counterbore", "Thread Tap", "Grinding Wheel (Aluminum Oxide)", "Grinding Wheel (Silicon Carbide)", "Diamond Dressing Tool", etc.
+STANDARD TOOL NAMING CONVENTION AND RECOMMENDATIONS:
+For Lathes: "Turning Insert", "Facing Insert", "Boring Bar", "Parting Tool", "Threading Insert", "Grooving Tool"
+For Mills: "Endmill", "Face Mill", "Ball Nose Endmill", "Chamfer Mill", "Slot Drill", "T-Slot Cutter", "Fly Cutter"
+For Drilling: "Drill Bit", "Reamer", "Countersink", "Thread Mill", "Twist Drill", "Center Drill", "Step Drill", "Forstner Bit", "Counterbore", "Thread Tap"
+For Grinding: "Grinding Wheel (Aluminum Oxide)", "Grinding Wheel (Silicon Carbide)", "Diamond Dressing Tool"
+
+TOOL RECOMMENDATION EXAMPLES:
+- If facing operation needs a Face Mill: "Purchase a Face Mill with diameter 2-4 inches for the [Machine Name]"
+- If drilling needs a Drill Bit: "Purchase a Drill Bit set (1/16" to 1/2") suitable for the [Machine Name]"
+- If turning needs a Turning Insert: "Purchase CNMG or DNMG Turning Inserts compatible with the [Machine Name]"
+- If threading needs a Thread Tap: "Purchase a Thread Tap set (M3-M12 or #4-40 to 1/2"-13) for the [Machine Name]"
+- If contouring needs a Ball Nose Endmill: "Purchase a Ball Nose Endmill set (1/8" to 1/2") for the [Machine Name]"
 
 I want you to think like an expert machinist with decades of experience:
 
@@ -244,12 +254,12 @@ I want you to think like an expert machinist with decades of experience:
    - Group similar operations that use the same tool to minimize tool changes
    - Identify when special fixturing or workholding devices would be needed
 
-4. TOOL AVAILABILITY VALIDATION:
+4. TOOL AVAILABILITY VALIDATION AND SPECIFIC RECOMMENDATIONS:
    - ALWAYS verify that the selected tool is actually available for the selected machine
    - Check the AVAILABLE TOOLS BY MACHINE ID data to confirm tool-machine compatibility
    - If the required tool is not available for the selected machine, either:
      a. Choose a different machine that has the required tool
-     b. Mark the step as unservable and specify the required tool type
+     b. Mark the step as unservable and provide a SPECIFIC tool recommendation with size/type details
 
 For each machining step:
 1. Identify the required machine type using our standard naming convention
@@ -260,15 +270,15 @@ For each machining step:
    a. Set machine_id to null and machine_name to null
    b. Mark the step as unservable
    c. Specify required_machine_type using our standard naming convention
-   d. Provide a recommendation on what specific machine to purchase
+   d. Provide a specific recommendation on what machine to purchase with model suggestions
 6. If we don't have a suitable tool for the selected machine:
    a. Set tooling_id to null and tool_name to null
    b. Mark the step as unservable
    c. Specify the required tool type using our standard naming convention
-   d. Provide a recommendation on what specific tool to purchase
+   d. Provide a SPECIFIC tool recommendation with exact specifications (e.g., "Purchase a 1/2" HSS Endmill with 4 flutes for aluminum machining on the [Machine Name]")
 
 IMPORTANT: Include ALL necessary steps, even if we don't have the equipment to perform them.
-For steps that cannot be performed with our inventory, provide detailed recommendations about what machine type and/or tool would be needed.
+For steps that cannot be performed with our inventory, provide DETAILED and SPECIFIC recommendations about what exact tool would be needed, including sizes, materials, and specifications.
 
 Return ONLY valid JSON with a "steps" array of objects, where each object has:
 - "description": detailed description of the machining step including specific fixturing requirements
@@ -281,7 +291,7 @@ Return ONLY valid JSON with a "steps" array of objects, where each object has:
 - "unservable": boolean indicating if we can't perform this step due to missing machine or tool
 - "required_machine_type": machine type needed if unavailable (using standard naming)
 - "required_tool_type": tool type needed if unavailable (using standard naming)
-- "recommendation": purchase recommendation if needed
+- "recommendation": SPECIFIC purchase recommendation with exact tool specifications and sizes if needed
 - "fixture_requirements": specific fixturing needed for this step
 - "setup_description": description of how the part should be positioned/secured`;
     } else {
@@ -302,11 +312,11 @@ ${JSON.stringify(toolTypesByMachineType, null, 2)}
 AVAILABLE MATERIALS:
 ${JSON.stringify(materials, null, 2)}
 
-CRITICAL INSTRUCTIONS FOR TOOL VALIDATION:
+CRITICAL INSTRUCTIONS FOR TOOL VALIDATION AND RECOMMENDATIONS:
 1. When selecting a machine, you MUST check if the required tool is actually available for that specific machine
 2. Use the AVAILABLE TOOLS BY MACHINE ID data to verify tool availability for the selected machine
 3. If a tool is not available for the selected machine, you have two options:
-   a. Mark the step as unservable and specify the required tool type
+   a. Mark the step as unservable and specify the required tool type with a specific recommendation
    b. Choose a different machine that has the required tool available
 4. Use EXACT machine names and tool names from the available inventory
 5. For machine_id: use the actual machine ID from the AVAILABLE MACHINES list
@@ -314,12 +324,23 @@ CRITICAL INSTRUCTIONS FOR TOOL VALIDATION:
 7. For machine_name: use the exact "name" field from the machines data
 8. For tool_name: use the exact "tool_name" field from the tooling data
 9. If a required tool type is not available for the selected machine, set tooling_id to null and specify the required tool type
+10. ALWAYS provide a specific tool recommendation using the standard naming convention when a tool is missing
 
 STANDARD MACHINE NAMING CONVENTION:
 - Use these exact machine type names: "Conventional Lathe", "CNC Lathe (Turning Center)", "Swiss-Type Lathe", "Turret Lathe", "Vertical Turret Lathe (VTL)", "Vertical Milling Machine", "Horizontal Milling Machine", "CNC Milling Center (3-axis)", "CNC Milling Center (4-axis)", "CNC Milling Center (5-axis)", "Bed-Type Milling Machine", "Knee-Type Milling Machine", "Gantry (Bridge) Milling Machine", "Drill Press (Bench or Floor)", "Radial Arm Drill", "CNC Drill/Tap Center", "Horizontal Boring Mill", "Vertical Boring Mill", "CNC Boring Machine", "Surface Grinder", "Cylindrical Grinder (OD Grinder)", "Internal Grinder (ID Grinder)", "Centerless Grinder", "Tool & Cutter Grinder", "Creep Feed Grinder", "Wire EDM", "Sinker (Ram) EDM", "Broaching Machine", "Honing Machine", "Lapping Machine", "Laser Cutting Machine", "Waterjet Cutting Machine", "Plasma Cutting Machine", "Ultrasonic Machining Center", "Electrochemical Machining (ECM) Machine", "CNC Router", "Additive/Subtractive Hybrid Machining Center", "3D Printer (for prototyping)", "CNC Laser Engraver"
 
-STANDARD TOOL NAMING CONVENTION:
-- Use these exact tool names based on machine type: "Turning Insert", "Facing Insert", "Boring Bar", "Parting Tool", "Threading Insert", "Grooving Tool", "Endmill", "Face Mill", "Ball Nose Endmill", "Chamfer Mill", "Slot Drill", "T-Slot Cutter", "Fly Cutter", "Drill Bit", "Reamer", "Countersink", "Thread Mill", "Twist Drill", "Center Drill", "Step Drill", "Forstner Bit", "Counterbore", "Thread Tap", "Grinding Wheel (Aluminum Oxide)", "Grinding Wheel (Silicon Carbide)", "Diamond Dressing Tool", etc.
+STANDARD TOOL NAMING CONVENTION AND RECOMMENDATIONS:
+For Lathes: "Turning Insert", "Facing Insert", "Boring Bar", "Parting Tool", "Threading Insert", "Grooving Tool"
+For Mills: "Endmill", "Face Mill", "Ball Nose Endmill", "Chamfer Mill", "Slot Drill", "T-Slot Cutter", "Fly Cutter"
+For Drilling: "Drill Bit", "Reamer", "Countersink", "Thread Mill", "Twist Drill", "Center Drill", "Step Drill", "Forstner Bit", "Counterbore", "Thread Tap"
+For Grinding: "Grinding Wheel (Aluminum Oxide)", "Grinding Wheel (Silicon Carbide)", "Diamond Dressing Tool"
+
+TOOL RECOMMENDATION EXAMPLES:
+- If facing operation needs a Face Mill: "Purchase a Face Mill with diameter 2-4 inches for the [Machine Name]"
+- If drilling needs a Drill Bit: "Purchase a Drill Bit set (1/16" to 1/2") suitable for the [Machine Name]"
+- If turning needs a Turning Insert: "Purchase CNMG or DNMG Turning Inserts compatible with the [Machine Name]"
+- If threading needs a Thread Tap: "Purchase a Thread Tap set (M3-M12 or #4-40 to 1/2"-13) for the [Machine Name]"
+- If contouring needs a Ball Nose Endmill: "Purchase a Ball Nose Endmill set (1/8" to 1/2") for the [Machine Name]"
 
 I want you to think like an expert machinist with decades of experience:
 
@@ -340,12 +361,12 @@ I want you to think like an expert machinist with decades of experience:
    - Group similar operations that use the same tool to minimize tool changes
    - Identify when special fixturing or workholding devices would be needed
 
-4. TOOL AVAILABILITY VALIDATION:
+4. TOOL AVAILABILITY VALIDATION AND SPECIFIC RECOMMENDATIONS:
    - ALWAYS verify that the selected tool is actually available for the selected machine
    - Check the AVAILABLE TOOLS BY MACHINE ID data to confirm tool-machine compatibility
    - If the required tool is not available for the selected machine, either:
      a. Choose a different machine that has the required tool
-     b. Mark the step as unservable and specify the required tool type
+     b. Mark the step as unservable and provide a SPECIFIC tool recommendation with size/type details
 
 For each machining step:
 1. Identify the required machine type using our standard naming convention
@@ -356,15 +377,15 @@ For each machining step:
    a. Set machine_id to null and machine_name to null
    b. Mark the step as unservable
    c. Specify required_machine_type using our standard naming convention
-   d. Provide a recommendation on what specific machine to purchase
+   d. Provide a specific recommendation on what machine to purchase with model suggestions
 6. If we don't have a suitable tool for the selected machine:
    a. Set tooling_id to null and tool_name to null
    b. Mark the step as unservable
    c. Specify the required tool type using our standard naming convention
-   d. Provide a recommendation on what specific tool to purchase
+   d. Provide a SPECIFIC tool recommendation with exact specifications (e.g., "Purchase a 1/2" HSS Endmill with 4 flutes for aluminum machining on the [Machine Name]")
 
 IMPORTANT: Include ALL necessary steps, even if we don't have the equipment to perform them.
-For steps that cannot be performed with our inventory, provide detailed recommendations about what machine type and/or tool would be needed.
+For steps that cannot be performed with our inventory, provide DETAILED and SPECIFIC recommendations about what exact tool would be needed, including sizes, materials, and specifications.
 
 Return ONLY valid JSON with a "steps" array of objects, where each object has:
 - "description": detailed description of the machining step including specific fixturing requirements
@@ -377,7 +398,7 @@ Return ONLY valid JSON with a "steps" array of objects, where each object has:
 - "unservable": boolean indicating if we can't perform this step due to missing machine or tool
 - "required_machine_type": machine type needed if unavailable (using standard naming)
 - "required_tool_type": tool type needed if unavailable (using standard naming)
-- "recommendation": purchase recommendation if needed
+- "recommendation": SPECIFIC purchase recommendation with exact tool specifications and sizes if needed
 - "fixture_requirements": specific fixturing needed for this step
 - "setup_description": description of how the part should be positioned/secured`;
     }

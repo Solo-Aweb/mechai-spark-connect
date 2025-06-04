@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -150,47 +151,49 @@ export default function ToolingPage() {
 
   return (
     <AppLayout>
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center gap-4">
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Tools</h1>
-          <ToolTypesSeeder />
+          <div className="flex items-center gap-4">
+            <ToolTypesSeeder />
+          </div>
         </div>
+
+        <ToolingHeader 
+          machines={machines}
+          isLoadingMachines={isLoadingMachines}
+          selectedMachineId={selectedMachineId}
+          setSelectedMachineId={setSelectedMachineId}
+          setIsDialogOpen={setIsDialogOpen}
+        />
+
+        <ErrorDisplay 
+          error={error}
+          isToolsError={isToolsError}
+          isMachinesError={isMachinesError}
+          clearError={clearError}
+        />
+
+        <ToolingTable 
+          tools={tools}
+          isLoadingTools={isLoadingTools}
+          selectedMachineId={selectedMachineId}
+          onEditTool={handleEditTool}
+        />
+
+        <AddToolDialog 
+          isOpen={isDialogOpen}
+          setIsOpen={setIsDialogOpen}
+          machines={machines}
+        />
+
+        <EditToolDialog
+          isOpen={isEditDialogOpen}
+          setIsOpen={setIsEditDialogOpen}
+          tool={selectedTool}
+          machines={machines}
+        />
       </div>
-
-      <ToolingHeader 
-        machines={machines}
-        isLoadingMachines={isLoadingMachines}
-        selectedMachineId={selectedMachineId}
-        setSelectedMachineId={setSelectedMachineId}
-        setIsDialogOpen={setIsDialogOpen}
-      />
-
-      <ErrorDisplay 
-        error={error}
-        isToolsError={isToolsError}
-        isMachinesError={isMachinesError}
-        clearError={clearError}
-      />
-
-      <ToolingTable 
-        tools={tools}
-        isLoadingTools={isLoadingTools}
-        selectedMachineId={selectedMachineId}
-        onEditTool={handleEditTool}
-      />
-
-      <AddToolDialog 
-        isOpen={isDialogOpen}
-        setIsOpen={setIsDialogOpen}
-        machines={machines}
-      />
-
-      <EditToolDialog
-        isOpen={isEditDialogOpen}
-        setIsOpen={setIsEditDialogOpen}
-        tool={selectedTool}
-        machines={machines}
-      />
     </AppLayout>
   );
 }

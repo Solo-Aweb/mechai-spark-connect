@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/sonner";
 import { TOOL_TYPES_CONFIG } from "@/config/toolTypes";
+import { Database } from "lucide-react";
 
 export function ToolTypesSeeder() {
   const [isSeeding, setIsSeeding] = useState(false);
@@ -36,6 +37,8 @@ export function ToolTypesSeeder() {
         }
       }
 
+      console.log(`Preparing to seed ${toolTypesToInsert.length} tool types...`);
+
       // Insert tool types in batches
       const batchSize = 50;
       for (let i = 0; i < toolTypesToInsert.length; i += batchSize) {
@@ -45,8 +48,10 @@ export function ToolTypesSeeder() {
           .insert(batch);
 
         if (error) {
+          console.error("Error inserting batch:", error);
           throw new Error(error.message);
         }
+        console.log(`Inserted batch ${Math.floor(i/batchSize) + 1}`);
       }
 
       toast.success(`Successfully seeded ${toolTypesToInsert.length} tool types`);
@@ -62,10 +67,12 @@ export function ToolTypesSeeder() {
     <Button 
       onClick={seedToolTypes} 
       disabled={isSeeding}
-      variant="outline"
+      variant="default"
       size="sm"
+      className="flex items-center gap-2"
     >
-      {isSeeding ? "Seeding..." : "Seed Tool Types"}
+      <Database className="h-4 w-4" />
+      {isSeeding ? "Seeding Tool Types..." : "Seed Tool Types"}
     </Button>
   );
 }

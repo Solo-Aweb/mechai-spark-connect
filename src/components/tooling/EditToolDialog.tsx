@@ -114,30 +114,29 @@ export function EditToolDialog({ isOpen, setIsOpen, tool, machines }: EditToolDi
     },
   });
 
-  // Query to fetch tool types
+  // Enhanced query to fetch tool types with better error handling
   const { data: toolTypes, isLoading: isLoadingToolTypes, error: toolTypesError } = useQuery({
     queryKey: ["tool-types", selectedMachineType],
     queryFn: async () => {
       try {
         console.log("EditDialog - Fetching tool types for machine type:", selectedMachineType);
         
-        let query = supabase
-          .from("tool_types")
-          .select("*")
-          .order("name");
-
-        if (selectedMachineType) {
-          query = query.eq("machine_type", selectedMachineType);
+        if (!selectedMachineType) {
+          return [];
         }
 
-        const { data, error } = await query;
-
-        console.log("EditDialog - Tool types data:", data);
+        const { data, error } = await supabase
+          .from("tool_types")
+          .select("*")
+          .eq("machine_type", selectedMachineType)
+          .order("name");
 
         if (error) {
           console.error("EditDialog - Error fetching tool types:", error);
           throw new Error(error.message);
         }
+        
+        console.log("EditDialog - Tool types data:", data);
         
         // Transform the data to match our ToolType interface
         const transformedData = data?.map(item => ({
@@ -161,6 +160,7 @@ export function EditToolDialog({ isOpen, setIsOpen, tool, machines }: EditToolDi
       }
     },
     enabled: !!selectedMachineType,
+    retry: 1,
   });
 
   // Reset form when tool changes
@@ -333,7 +333,10 @@ export function EditToolDialog({ isOpen, setIsOpen, tool, machines }: EditToolDi
                           ))
                         ) : (
                           <SelectItem value="no-options" disabled>
-                            No tool types available for {selectedMachineType}
+                            {isLoadingToolTypes 
+                              ? "Loading..." 
+                              : `No tool types available for ${selectedMachineType}. Try seeding the database first.`
+                            }
                           </SelectItem>
                         )}
                       </SelectContent>
@@ -406,7 +409,7 @@ export function EditToolDialog({ isOpen, setIsOpen, tool, machines }: EditToolDi
               )}
             />
 
-            {selectedToolType && (
+            {selectedToolType && selectedToolType.param_schema && (
               <DynamicParameterFields
                 control={form.control}
                 paramSchema={selectedToolType.param_schema}

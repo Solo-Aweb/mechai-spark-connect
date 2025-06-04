@@ -8,6 +8,7 @@ import { ToolingTable } from "@/components/tooling/ToolingTable";
 import { AddToolDialog } from "@/components/tooling/AddToolDialog";
 import { EditToolDialog } from "@/components/tooling/EditToolDialog";
 import { ErrorDisplay } from "@/components/tooling/ErrorDisplay";
+import { ToolTypesSeeder } from "@/components/tooling/ToolTypesSeeder";
 
 // Define the Tool type based on the database schema
 type Tool = {
@@ -149,6 +150,13 @@ export default function ToolingPage() {
 
   return (
     <AppLayout>
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold">Tools</h1>
+          <ToolTypesSeeder />
+        </div>
+      </div>
+
       <ToolingHeader 
         machines={machines}
         isLoadingMachines={isLoadingMachines}

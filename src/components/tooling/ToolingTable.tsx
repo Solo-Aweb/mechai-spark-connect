@@ -102,9 +102,6 @@ export function ToolingTable({ tools, isLoadingTools, selectedMachineId, onEditT
           <TableHead>Tool Name</TableHead>
           <TableHead>Type</TableHead>
           <TableHead>Machine</TableHead>
-          <TableHead>Material</TableHead>
-          <TableHead>Diameter (mm)</TableHead>
-          <TableHead>Length (mm)</TableHead>
           <TableHead>Life Remaining</TableHead>
           <TableHead>Parameters</TableHead>
           <TableHead>Actions</TableHead>
@@ -128,9 +125,6 @@ export function ToolingTable({ tools, isLoadingTools, selectedMachineId, onEditT
                   <div className="text-xs text-gray-500">({tool.machines.type})</div>
                 )}
               </TableCell>
-              <TableCell>{tool.material}</TableCell>
-              <TableCell>{tool.diameter}</TableCell>
-              <TableCell>{tool.length}</TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
                   <div className={`w-2 h-2 rounded-full ${
@@ -187,7 +181,7 @@ export function ToolingTable({ tools, isLoadingTools, selectedMachineId, onEditT
           ))
         ) : (
           <TableRow>
-            <TableCell colSpan={9} className="text-center">
+            <TableCell colSpan={6} className="text-center">
               {selectedMachineId
                 ? "No tools found for the selected machine. Add a new tool to get started."
                 : "No tools found. Add a new tool to get started."}

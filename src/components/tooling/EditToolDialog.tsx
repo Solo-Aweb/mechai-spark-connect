@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -38,9 +39,6 @@ const toolFormSchema = z.object({
   tool_name: z.string().min(1, "Tool name is required"),
   machine_id: z.string().min(1, "Machine selection is required"),
   tool_type_id: z.string().min(1, "Tool type selection is required"),
-  material: z.string().min(1, "Material is required"),
-  diameter: z.coerce.number().positive("Diameter must be positive"),
-  length: z.coerce.number().positive("Length must be positive"),
   life_remaining: z.coerce.number().min(0, "Life remaining cannot be negative"),
   cost: z.coerce.number().min(0, "Tool cost cannot be negative"),
   replacement_cost: z.coerce.number().min(0, "Replacement cost cannot be negative"),
@@ -104,9 +102,6 @@ export function EditToolDialog({ isOpen, setIsOpen, tool, machines }: EditToolDi
       tool_name: "",
       machine_id: "",
       tool_type_id: "",
-      material: "",
-      diameter: 0,
-      length: 0,
       life_remaining: 100,
       cost: 0,
       replacement_cost: 0,
@@ -170,9 +165,6 @@ export function EditToolDialog({ isOpen, setIsOpen, tool, machines }: EditToolDi
         tool_name: tool.tool_name,
         machine_id: tool.machine_id,
         tool_type_id: tool.tool_type_id || "",
-        material: tool.material,
-        diameter: tool.diameter,
-        length: tool.length,
         life_remaining: tool.life_remaining,
         cost: tool.cost || 0,
         replacement_cost: tool.replacement_cost || 0,
@@ -222,9 +214,9 @@ export function EditToolDialog({ isOpen, setIsOpen, tool, machines }: EditToolDi
           tool_name: values.tool_name,
           machine_id: values.machine_id,
           tool_type_id: values.tool_type_id,
-          material: values.material,
-          diameter: values.diameter,
-          length: values.length,
+          material: tool.material, // Keep existing material value
+          diameter: tool.diameter, // Keep existing diameter value
+          length: tool.length, // Keep existing length value
           life_remaining: values.life_remaining,
           cost: values.cost,
           replacement_cost: values.replacement_cost,
@@ -335,7 +327,7 @@ export function EditToolDialog({ isOpen, setIsOpen, tool, machines }: EditToolDi
                           <SelectItem value="no-options" disabled>
                             {isLoadingToolTypes 
                               ? "Loading..." 
-                              : `No tool types available for ${selectedMachineType}. Try seeding the database first.`
+                              : `No tool types available for ${selectedMachineType}.`
                             }
                           </SelectItem>
                         )}
@@ -352,49 +344,6 @@ export function EditToolDialog({ isOpen, setIsOpen, tool, machines }: EditToolDi
               />
             )}
 
-            <FormField
-              control={form.control}
-              name="material"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Material</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., HSS, Carbide" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="diameter"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Diameter (mm)</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.1" min="0" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="length"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Length (mm)</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.1" min="0" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
             <FormField
               control={form.control}
               name="life_remaining"

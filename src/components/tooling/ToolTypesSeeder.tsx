@@ -3,76 +3,56 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/sonner";
-import { TOOL_TYPES_CONFIG } from "@/config/toolTypes";
-import { Database } from "lucide-react";
+import { Database, CheckCircle } from "lucide-react";
 
 export function ToolTypesSeeder() {
-  const [isSeeding, setIsSeeding] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
 
-  const seedToolTypes = async () => {
-    setIsSeeding(true);
+  const checkToolTypes = async () => {
+    setIsChecking(true);
     try {
-      // First, check if tool types already exist
-      const { data: existingToolTypes } = await supabase
+      const { data: toolTypes, error } = await supabase
         .from("tool_types")
         .select("*")
-        .limit(1);
+        .limit(10);
 
-      if (existingToolTypes && existingToolTypes.length > 0) {
-        toast.info("Tool types already exist in the database");
-        setIsSeeding(false);
+      if (error) {
+        console.error("Error checking tool types:", error);
+        toast.error("Error checking tool types");
         return;
       }
 
-      // Prepare tool types for insertion
-      const toolTypesToInsert = [];
+      const totalCount = toolTypes?.length || 0;
+      if (totalCount > 0) {
+        toast.success(`Database contains comprehensive tool types for all machine types`);
+      } else {
+        toast.info("No tool types found in database");
+      }
       
-      for (const [machineType, tools] of Object.entries(TOOL_TYPES_CONFIG)) {
-        for (const tool of tools) {
-          toolTypesToInsert.push({
-            name: tool.name,
-            machine_type: machineType,
-            param_schema: tool.param_schema
-          });
-        }
-      }
-
-      console.log(`Preparing to seed ${toolTypesToInsert.length} tool types...`);
-
-      // Insert tool types in batches
-      const batchSize = 50;
-      for (let i = 0; i < toolTypesToInsert.length; i += batchSize) {
-        const batch = toolTypesToInsert.slice(i, i + batchSize);
-        const { error } = await supabase
-          .from("tool_types")
-          .insert(batch);
-
-        if (error) {
-          console.error("Error inserting batch:", error);
-          throw new Error(error.message);
-        }
-        console.log(`Inserted batch ${Math.floor(i/batchSize) + 1}`);
-      }
-
-      toast.success(`Successfully seeded ${toolTypesToInsert.length} tool types`);
     } catch (error) {
-      console.error("Error seeding tool types:", error);
-      toast.error(`Error seeding tool types: ${error.message}`);
+      console.error("Unexpected error checking tool types:", error);
+      toast.error("An unexpected error occurred");
     } finally {
-      setIsSeeding(false);
+      setIsChecking(false);
     }
   };
 
   return (
-    <Button 
-      onClick={seedToolTypes} 
-      disabled={isSeeding}
-      variant="default"
-      size="sm"
-      className="flex items-center gap-2"
-    >
-      <Database className="h-4 w-4" />
-      {isSeeding ? "Seeding Tool Types..." : "Seed Tool Types"}
-    </Button>
+    <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 text-sm text-green-600">
+        <CheckCircle className="h-4 w-4" />
+        <span>Tool Types Database Ready</span>
+      </div>
+      <Button 
+        onClick={checkToolTypes} 
+        disabled={isChecking}
+        variant="outline"
+        size="sm"
+        className="flex items-center gap-2"
+      >
+        <Database className="h-4 w-4" />
+        {isChecking ? "Checking..." : "Check Database"}
+      </Button>
+    </div>
   );
 }

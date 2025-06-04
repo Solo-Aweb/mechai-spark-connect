@@ -354,7 +354,7 @@ export const ItineraryCard = ({
         )}
 
         {countParameterIssues() > 0 && (
-          <Alert className="mt-4" variant="default" className="border-amber-200 bg-amber-50">
+          <Alert className="mt-4 border-amber-200 bg-amber-50">
             <AlertTriangle className="h-4 w-4 text-amber-600" />
             <AlertDescription className="text-amber-800">
               {countParameterIssues()} machining step{countParameterIssues() !== 1 ? 's' : ''} have tools with inadequate parameters.

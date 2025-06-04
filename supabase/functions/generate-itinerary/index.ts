@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.0';
 
@@ -193,31 +194,44 @@ serve(async (req) => {
 AVAILABLE MACHINES BY TYPE:
 ${JSON.stringify(machinesByType, null, 2)}
 
-AVAILABLE TOOLS BY MACHINE ID:
+AVAILABLE TOOLS BY MACHINE ID (USER'S ACTUAL TOOLING INVENTORY):
 ${JSON.stringify(toolingByMachineId, null, 2)}
 
 AVAILABLE TOOLS BY MACHINE TYPE:
 ${JSON.stringify(toolingByMachineType, null, 2)}
 
-AVAILABLE TOOL TYPES BY MACHINE TYPE:
+AVAILABLE TOOL TYPES BY MACHINE TYPE (DATABASE REFERENCE - NOT INVENTORY):
 ${JSON.stringify(toolTypesByMachineType, null, 2)}
 
 AVAILABLE MATERIALS:
 ${JSON.stringify(materials, null, 2)}
 
-CRITICAL INSTRUCTIONS FOR TOOL VALIDATION AND RECOMMENDATIONS:
-1. When selecting a machine, you MUST check if the required tool is actually available for that specific machine
-2. Use the AVAILABLE TOOLS BY MACHINE ID data to verify tool availability for the selected machine
-3. If a tool is not available for the selected machine, you have two options:
-   a. Mark the step as unservable and specify the required tool type with a specific recommendation
-   b. Choose a different machine that has the required tool available
-4. Use EXACT machine names and tool names from the available inventory
-5. For machine_id: use the actual machine ID from the AVAILABLE MACHINES list
-6. For tooling_id: use the actual tool ID from the AVAILABLE TOOLS list, but ONLY if that tool is available for the selected machine
-7. For machine_name: use the exact "name" field from the machines data
-8. For tool_name: use the exact "tool_name" field from the tooling data
-9. If a required tool type is not available for the selected machine, set tooling_id to null and specify the required tool type
-10. ALWAYS provide a specific tool recommendation using the standard naming convention when a tool is missing
+CRITICAL TOOL VALIDATION RULES - READ CAREFULLY:
+
+1. **ONLY USE TOOLS FROM THE USER'S ACTUAL INVENTORY**: You can ONLY assign tools that exist in the "AVAILABLE TOOLS BY MACHINE ID" data. This represents the user's actual tooling inventory.
+
+2. **DO NOT USE TOOLS FROM DATABASE REFERENCE**: The "AVAILABLE TOOL TYPES BY MACHINE TYPE" is just a database reference of tool types that exist in the system. These are NOT available to the user unless they appear in the "AVAILABLE TOOLS BY MACHINE ID" data.
+
+3. **STRICT TOOL ASSIGNMENT RULES**:
+   - For machine_id: use the actual machine ID from the AVAILABLE MACHINES list
+   - For tooling_id: use ONLY tool IDs that exist in "AVAILABLE TOOLS BY MACHINE ID" for the selected machine
+   - For machine_name: use the exact "name" field from the machines data
+   - For tool_name: use ONLY tool names that exist in "AVAILABLE TOOLS BY MACHINE ID" for the selected machine
+
+4. **MARKING TOOLS AS MISSING**:
+   - If a required tool type exists in the database but is NOT in the user's inventory for a specific machine, mark it as missing
+   - Set tooling_id to null and tool_name to null
+   - Set unservable to true
+   - Specify the required_tool_type
+   - Provide a specific recommendation for purchasing that tool type
+
+5. **TOOL VALIDATION PROCESS**:
+   a. Identify the required machine for the operation
+   b. Check if that machine exists in the user's inventory
+   c. Identify the required tool type for the operation
+   d. Check if a tool of that type exists in "AVAILABLE TOOLS BY MACHINE ID" for the selected machine
+   e. If the tool exists in the user's inventory: assign it
+   f. If the tool does NOT exist in the user's inventory: mark as missing and provide recommendation
 
 STANDARD MACHINE NAMING CONVENTION:
 - Use these exact machine type names: "Conventional Lathe", "CNC Lathe (Turning Center)", "Swiss-Type Lathe", "Turret Lathe", "Vertical Turret Lathe (VTL)", "Vertical Milling Machine", "Horizontal Milling Machine", "CNC Milling Center (3-axis)", "CNC Milling Center (4-axis)", "CNC Milling Center (5-axis)", "Bed-Type Milling Machine", "Knee-Type Milling Machine", "Gantry (Bridge) Milling Machine", "Drill Press (Bench or Floor)", "Radial Arm Drill", "CNC Drill/Tap Center", "Horizontal Boring Mill", "Vertical Boring Mill", "CNC Boring Machine", "Surface Grinder", "Cylindrical Grinder (OD Grinder)", "Internal Grinder (ID Grinder)", "Centerless Grinder", "Tool & Cutter Grinder", "Creep Feed Grinder", "Wire EDM", "Sinker (Ram) EDM", "Broaching Machine", "Honing Machine", "Lapping Machine", "Laser Cutting Machine", "Waterjet Cutting Machine", "Plasma Cutting Machine", "Ultrasonic Machining Center", "Electrochemical Machining (ECM) Machine", "CNC Router", "Additive/Subtractive Hybrid Machining Center", "3D Printer (for prototyping)", "CNC Laser Engraver"
@@ -254,31 +268,30 @@ I want you to think like an expert machinist with decades of experience:
    - Group similar operations that use the same tool to minimize tool changes
    - Identify when special fixturing or workholding devices would be needed
 
-4. TOOL AVAILABILITY VALIDATION AND SPECIFIC RECOMMENDATIONS:
-   - ALWAYS verify that the selected tool is actually available for the selected machine
-   - Check the AVAILABLE TOOLS BY MACHINE ID data to confirm tool-machine compatibility
-   - If the required tool is not available for the selected machine, either:
-     a. Choose a different machine that has the required tool
-     b. Mark the step as unservable and provide a SPECIFIC tool recommendation with size/type details
+4. STRICT TOOL INVENTORY VALIDATION:
+   - NEVER assign a tool that doesn't exist in the user's "AVAILABLE TOOLS BY MACHINE ID" inventory
+   - Always cross-reference the selected machine ID with available tools for that specific machine
+   - If a required tool type exists in the database but not in the user's inventory, mark as unservable
+   - Provide specific tool recommendations with exact specifications when tools are missing
 
 For each machining step:
 1. Identify the required machine type using our standard naming convention
 2. Choose the most appropriate machine from our inventory (use exact machine name and ID)
-3. Verify that the required tool is available for that specific machine using AVAILABLE TOOLS BY MACHINE ID
-4. Choose the most appropriate tool from our inventory that is available for the selected machine (use exact tool name and ID)
-5. If we don't have a suitable machine:
+3. Identify the required tool type for the operation
+4. Check if a tool of that type exists in "AVAILABLE TOOLS BY MACHINE ID" for the selected machine
+5. If the tool exists in the user's inventory: assign it with exact tool name and ID
+6. If the tool does NOT exist in the user's inventory:
+   a. Set tooling_id to null and tool_name to null
+   b. Mark the step as unservable
+   c. Specify the required tool type using our standard naming convention
+   d. Provide a SPECIFIC tool recommendation with exact specifications
+7. If we don't have a suitable machine:
    a. Set machine_id to null and machine_name to null
    b. Mark the step as unservable
    c. Specify required_machine_type using our standard naming convention
    d. Provide a specific recommendation on what machine to purchase with model suggestions
-6. If we don't have a suitable tool for the selected machine:
-   a. Set tooling_id to null and tool_name to null
-   b. Mark the step as unservable
-   c. Specify the required tool type using our standard naming convention
-   d. Provide a SPECIFIC tool recommendation with exact specifications (e.g., "Purchase a 1/2" HSS Endmill with 4 flutes for aluminum machining on the [Machine Name]")
 
-IMPORTANT: Include ALL necessary steps, even if we don't have the equipment to perform them.
-For steps that cannot be performed with our inventory, provide DETAILED and SPECIFIC recommendations about what exact tool would be needed, including sizes, materials, and specifications.
+IMPORTANT: A tool can only be used if it appears in the user's "AVAILABLE TOOLS BY MACHINE ID" inventory for the specific machine being used. Do not use tools that exist in the database but are not assigned to the user's machines.
 
 Return ONLY valid JSON with a "steps" array of objects, where each object has:
 - "description": detailed description of the machining step including specific fixturing requirements
@@ -300,31 +313,44 @@ Return ONLY valid JSON with a "steps" array of objects, where each object has:
 AVAILABLE MACHINES BY TYPE:
 ${JSON.stringify(machinesByType, null, 2)}
 
-AVAILABLE TOOLS BY MACHINE ID:
+AVAILABLE TOOLS BY MACHINE ID (USER'S ACTUAL TOOLING INVENTORY):
 ${JSON.stringify(toolingByMachineId, null, 2)}
 
 AVAILABLE TOOLS BY MACHINE TYPE:
 ${JSON.stringify(toolingByMachineType, null, 2)}
 
-AVAILABLE TOOL TYPES BY MACHINE TYPE:
+AVAILABLE TOOL TYPES BY MACHINE TYPE (DATABASE REFERENCE - NOT INVENTORY):
 ${JSON.stringify(toolTypesByMachineType, null, 2)}
 
 AVAILABLE MATERIALS:
 ${JSON.stringify(materials, null, 2)}
 
-CRITICAL INSTRUCTIONS FOR TOOL VALIDATION AND RECOMMENDATIONS:
-1. When selecting a machine, you MUST check if the required tool is actually available for that specific machine
-2. Use the AVAILABLE TOOLS BY MACHINE ID data to verify tool availability for the selected machine
-3. If a tool is not available for the selected machine, you have two options:
-   a. Mark the step as unservable and specify the required tool type with a specific recommendation
-   b. Choose a different machine that has the required tool available
-4. Use EXACT machine names and tool names from the available inventory
-5. For machine_id: use the actual machine ID from the AVAILABLE MACHINES list
-6. For tooling_id: use the actual tool ID from the AVAILABLE TOOLS lists, but ONLY if that tool is available for the selected machine
-7. For machine_name: use the exact "name" field from the machines data
-8. For tool_name: use the exact "tool_name" field from the tooling data
-9. If a required tool type is not available for the selected machine, set tooling_id to null and specify the required tool type
-10. ALWAYS provide a specific tool recommendation using the standard naming convention when a tool is missing
+CRITICAL TOOL VALIDATION RULES - READ CAREFULLY:
+
+1. **ONLY USE TOOLS FROM THE USER'S ACTUAL INVENTORY**: You can ONLY assign tools that exist in the "AVAILABLE TOOLS BY MACHINE ID" data. This represents the user's actual tooling inventory.
+
+2. **DO NOT USE TOOLS FROM DATABASE REFERENCE**: The "AVAILABLE TOOL TYPES BY MACHINE TYPE" is just a database reference of tool types that exist in the system. These are NOT available to the user unless they appear in the "AVAILABLE TOOLS BY MACHINE ID" data.
+
+3. **STRICT TOOL ASSIGNMENT RULES**:
+   - For machine_id: use the actual machine ID from the AVAILABLE MACHINES list
+   - For tooling_id: use ONLY tool IDs that exist in "AVAILABLE TOOLS BY MACHINE ID" for the selected machine
+   - For machine_name: use the exact "name" field from the machines data
+   - For tool_name: use ONLY tool names that exist in "AVAILABLE TOOLS BY MACHINE ID" for the selected machine
+
+4. **MARKING TOOLS AS MISSING**:
+   - If a required tool type exists in the database but is NOT in the user's inventory for a specific machine, mark it as missing
+   - Set tooling_id to null and tool_name to null
+   - Set unservable to true
+   - Specify the required_tool_type
+   - Provide a specific recommendation for purchasing that tool type
+
+5. **TOOL VALIDATION PROCESS**:
+   a. Identify the required machine for the operation
+   b. Check if that machine exists in the user's inventory
+   c. Identify the required tool type for the operation
+   d. Check if a tool of that type exists in "AVAILABLE TOOLS BY MACHINE ID" for the selected machine
+   e. If the tool exists in the user's inventory: assign it
+   f. If the tool does NOT exist in the user's inventory: mark as missing and provide recommendation
 
 STANDARD MACHINE NAMING CONVENTION:
 - Use these exact machine type names: "Conventional Lathe", "CNC Lathe (Turning Center)", "Swiss-Type Lathe", "Turret Lathe", "Vertical Turret Lathe (VTL)", "Vertical Milling Machine", "Horizontal Milling Machine", "CNC Milling Center (3-axis)", "CNC Milling Center (4-axis)", "CNC Milling Center (5-axis)", "Bed-Type Milling Machine", "Knee-Type Milling Machine", "Gantry (Bridge) Milling Machine", "Drill Press (Bench or Floor)", "Radial Arm Drill", "CNC Drill/Tap Center", "Horizontal Boring Mill", "Vertical Boring Mill", "CNC Boring Machine", "Surface Grinder", "Cylindrical Grinder (OD Grinder)", "Internal Grinder (ID Grinder)", "Centerless Grinder", "Tool & Cutter Grinder", "Creep Feed Grinder", "Wire EDM", "Sinker (Ram) EDM", "Broaching Machine", "Honing Machine", "Lapping Machine", "Laser Cutting Machine", "Waterjet Cutting Machine", "Plasma Cutting Machine", "Ultrasonic Machining Center", "Electrochemical Machining (ECM) Machine", "CNC Router", "Additive/Subtractive Hybrid Machining Center", "3D Printer (for prototyping)", "CNC Laser Engraver"
@@ -361,31 +387,30 @@ I want you to think like an expert machinist with decades of experience:
    - Group similar operations that use the same tool to minimize tool changes
    - Identify when special fixturing or workholding devices would be needed
 
-4. TOOL AVAILABILITY VALIDATION AND SPECIFIC RECOMMENDATIONS:
-   - ALWAYS verify that the selected tool is actually available for the selected machine
-   - Check the AVAILABLE TOOLS BY MACHINE ID data to confirm tool-machine compatibility
-   - If the required tool is not available for the selected machine, either:
-     a. Choose a different machine that has the required tool
-     b. Mark the step as unservable and provide a SPECIFIC tool recommendation with size/type details
+4. STRICT TOOL INVENTORY VALIDATION:
+   - NEVER assign a tool that doesn't exist in the user's "AVAILABLE TOOLS BY MACHINE ID" inventory
+   - Always cross-reference the selected machine ID with available tools for that specific machine
+   - If a required tool type exists in the database but not in the user's inventory, mark as unservable
+   - Provide specific tool recommendations with exact specifications when tools are missing
 
 For each machining step:
 1. Identify the required machine type using our standard naming convention
 2. Choose the most appropriate machine from our inventory (use exact machine name and ID)
-3. Verify that the required tool is available for that specific machine using AVAILABLE TOOLS BY MACHINE ID
-4. Choose the most appropriate tool from our inventory that is available for the selected machine (use exact tool name and ID)
-5. If we don't have a suitable machine:
+3. Identify the required tool type for the operation
+4. Check if a tool of that type exists in "AVAILABLE TOOLS BY MACHINE ID" for the selected machine
+5. If the tool exists in the user's inventory: assign it with exact tool name and ID
+6. If the tool does NOT exist in the user's inventory:
+   a. Set tooling_id to null and tool_name to null
+   b. Mark the step as unservable
+   c. Specify the required tool type using our standard naming convention
+   d. Provide a SPECIFIC tool recommendation with exact specifications
+7. If we don't have a suitable machine:
    a. Set machine_id to null and machine_name to null
    b. Mark the step as unservable
    c. Specify required_machine_type using our standard naming convention
    d. Provide a specific recommendation on what machine to purchase with model suggestions
-6. If we don't have a suitable tool for the selected machine:
-   a. Set tooling_id to null and tool_name to null
-   b. Mark the step as unservable
-   c. Specify the required tool type using our standard naming convention
-   d. Provide a SPECIFIC tool recommendation with exact specifications (e.g., "Purchase a 1/2" HSS Endmill with 4 flutes for aluminum machining on the [Machine Name]")
 
-IMPORTANT: Include ALL necessary steps, even if we don't have the equipment to perform them.
-For steps that cannot be performed with our inventory, provide DETAILED and SPECIFIC recommendations about what exact tool would be needed, including sizes, materials, and specifications.
+IMPORTANT: A tool can only be used if it appears in the user's "AVAILABLE TOOLS BY MACHINE ID" inventory for the specific machine being used. Do not use tools that exist in the database but are not assigned to the user's machines.
 
 Return ONLY valid JSON with a "steps" array of objects, where each object has:
 - "description": detailed description of the machining step including specific fixturing requirements
@@ -424,9 +449,9 @@ Return ONLY valid JSON with a "steps" array of objects, where each object has:
 5. Live tooling capabilities on lathes and mill-turn centers
 6. Efficient use of machine capabilities to minimize setup changes
 7. Comprehensive knowledge of machine types and tool types with proper naming conventions
-8. CRITICAL: Tool-machine compatibility verification - you MUST check that the selected tool is actually available for the selected machine
+8. CRITICAL: Strict tool inventory validation - you MUST ONLY use tools that exist in the user's "AVAILABLE TOOLS BY MACHINE ID" inventory. Tools that exist in the database but are not assigned to specific machines should be treated as unavailable and marked for purchase recommendations.
             
-Your goal is to create the most efficient machining plan possible, intelligently grouping operations by fixturing requirements and machine capabilities. You MUST use exact machine names and tool names from the provided inventory. When equipment is missing, use the standard naming conventions provided. You MUST verify tool availability for each selected machine before assigning it to a step. Return ONLY valid JSON with no markdown formatting or explanations.`
+Your goal is to create the most efficient machining plan possible, intelligently grouping operations by fixturing requirements and machine capabilities. You MUST use exact machine names and tool names from the provided inventory. When equipment is missing, use the standard naming conventions provided. You MUST verify tool availability for each selected machine before assigning it to a step. A tool can ONLY be assigned if it appears in the user's actual tooling inventory for that specific machine. Return ONLY valid JSON with no markdown formatting or explanations.`
           },
           {
             role: 'user',

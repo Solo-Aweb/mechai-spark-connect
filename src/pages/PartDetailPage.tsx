@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -103,6 +102,7 @@ const PartDetailPage = () => {
                 cost: step.cost || 0,
                 unservable: step.unservable || false,
                 required_machine_type: step.required_machine_type || null,
+                required_tool_type: step.required_tool_type || null,
                 recommendation: step.recommendation || null,
                 fixture_requirements: step.fixture_requirements || null,
                 setup_description: step.setup_description || null,
@@ -122,6 +122,7 @@ const PartDetailPage = () => {
                 cost: step.cost || 0,
                 unservable: step.unservable || false,
                 required_machine_type: step.required_machine_type || null,
+                required_tool_type: step.required_tool_type || null,
                 recommendation: step.recommendation || null,
                 fixture_requirements: step.fixture_requirements || null,
                 setup_description: step.setup_description || null,
@@ -187,6 +188,7 @@ const PartDetailPage = () => {
               tool_wear_cost: 5, // Example default value
               setup_cost: 10, // Example default value
               required_machine_type: step.required_machine_type || (step.unservable ? "Required machine type not specified" : null),
+              required_tool_type: step.required_tool_type || (step.unservable ? "Required tool type not specified" : null),
               recommendation: step.recommendation || null,
               fixture_requirements: step.fixture_requirements || null,
               setup_description: step.setup_description || null

@@ -14,6 +14,7 @@ export interface ItineraryStep {
   tool_wear_cost?: number;
   setup_cost?: number;
   required_machine_type?: string;
+  required_tool_type?: string;
   recommendation?: string;
   fixture_requirements?: string;
   setup_description?: string;

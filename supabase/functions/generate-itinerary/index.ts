@@ -157,6 +157,16 @@ serve(async (req) => {
       return acc;
     }, {});
 
+    // Organize tooling by machine ID for easier reference
+    const toolingByMachineId = tooling.reduce((acc, tool) => {
+      const machineId = tool.machine_id;
+      if (!acc[machineId]) {
+        acc[machineId] = [];
+      }
+      acc[machineId].push(tool);
+      return acc;
+    }, {});
+
     // Organize tooling by machine type for easier reference
     const toolingByMachineType = tooling.reduce((acc, tool) => {
       const machineType = tool.machines?.type || 'Unknown';
@@ -184,6 +194,9 @@ serve(async (req) => {
 AVAILABLE MACHINES BY TYPE:
 ${JSON.stringify(machinesByType, null, 2)}
 
+AVAILABLE TOOLS BY MACHINE ID:
+${JSON.stringify(toolingByMachineId, null, 2)}
+
 AVAILABLE TOOLS BY MACHINE TYPE:
 ${JSON.stringify(toolingByMachineType, null, 2)}
 
@@ -193,14 +206,18 @@ ${JSON.stringify(toolTypesByMachineType, null, 2)}
 AVAILABLE MATERIALS:
 ${JSON.stringify(materials, null, 2)}
 
-IMPORTANT INSTRUCTIONS:
-1. Use EXACT machine names and tool names from the available inventory above
-2. For machine_id: use the actual machine ID from the AVAILABLE MACHINES list
-3. For tooling_id: use the actual tool ID from the AVAILABLE TOOLS list
-4. For machine_name: use the exact "name" field from the machines data
-5. For tool_name: use the exact "tool_name" field from the tooling data
-6. If a required machine type is not available, set machine_id to null and specify the required_machine_type using our standard naming convention
-7. If a required tool type is not available, set tooling_id to null and specify the tool type needed using our standard naming convention from the AVAILABLE TOOL TYPES
+CRITICAL INSTRUCTIONS FOR TOOL VALIDATION:
+1. When selecting a machine, you MUST check if the required tool is actually available for that specific machine
+2. Use the AVAILABLE TOOLS BY MACHINE ID data to verify tool availability for the selected machine
+3. If a tool is not available for the selected machine, you have two options:
+   a. Mark the step as unservable and specify the required tool type
+   b. Choose a different machine that has the required tool available
+4. Use EXACT machine names and tool names from the available inventory
+5. For machine_id: use the actual machine ID from the AVAILABLE MACHINES list
+6. For tooling_id: use the actual tool ID from the AVAILABLE TOOLS list, but ONLY if that tool is available for the selected machine
+7. For machine_name: use the exact "name" field from the machines data
+8. For tool_name: use the exact "tool_name" field from the tooling data
+9. If a required tool type is not available for the selected machine, set tooling_id to null and specify the required tool type
 
 STANDARD MACHINE NAMING CONVENTION:
 - Use these exact machine type names: "Conventional Lathe", "CNC Lathe (Turning Center)", "Swiss-Type Lathe", "Turret Lathe", "Vertical Turret Lathe (VTL)", "Vertical Milling Machine", "Horizontal Milling Machine", "CNC Milling Center (3-axis)", "CNC Milling Center (4-axis)", "CNC Milling Center (5-axis)", "Bed-Type Milling Machine", "Knee-Type Milling Machine", "Gantry (Bridge) Milling Machine", "Drill Press (Bench or Floor)", "Radial Arm Drill", "CNC Drill/Tap Center", "Horizontal Boring Mill", "Vertical Boring Mill", "CNC Boring Machine", "Surface Grinder", "Cylindrical Grinder (OD Grinder)", "Internal Grinder (ID Grinder)", "Centerless Grinder", "Tool & Cutter Grinder", "Creep Feed Grinder", "Wire EDM", "Sinker (Ram) EDM", "Broaching Machine", "Honing Machine", "Lapping Machine", "Laser Cutting Machine", "Waterjet Cutting Machine", "Plasma Cutting Machine", "Ultrasonic Machining Center", "Electrochemical Machining (ECM) Machine", "CNC Router", "Additive/Subtractive Hybrid Machining Center", "3D Printer (for prototyping)", "CNC Laser Engraver"
@@ -227,18 +244,26 @@ I want you to think like an expert machinist with decades of experience:
    - Group similar operations that use the same tool to minimize tool changes
    - Identify when special fixturing or workholding devices would be needed
 
+4. TOOL AVAILABILITY VALIDATION:
+   - ALWAYS verify that the selected tool is actually available for the selected machine
+   - Check the AVAILABLE TOOLS BY MACHINE ID data to confirm tool-machine compatibility
+   - If the required tool is not available for the selected machine, either:
+     a. Choose a different machine that has the required tool
+     b. Mark the step as unservable and specify the required tool type
+
 For each machining step:
 1. Identify the required machine type using our standard naming convention
 2. Choose the most appropriate machine from our inventory (use exact machine name and ID)
-3. Choose the most appropriate tool from our inventory (use exact tool name and ID)
-4. If we don't have a suitable machine:
+3. Verify that the required tool is available for that specific machine using AVAILABLE TOOLS BY MACHINE ID
+4. Choose the most appropriate tool from our inventory that is available for the selected machine (use exact tool name and ID)
+5. If we don't have a suitable machine:
    a. Set machine_id to null and machine_name to null
    b. Mark the step as unservable
    c. Specify required_machine_type using our standard naming convention
    d. Provide a recommendation on what specific machine to purchase
-5. If we don't have a suitable tool:
+6. If we don't have a suitable tool for the selected machine:
    a. Set tooling_id to null and tool_name to null
-   b. Consider if the step is still serviceable with manual tooling or alternatives
+   b. Mark the step as unservable
    c. Specify the required tool type using our standard naming convention
    d. Provide a recommendation on what specific tool to purchase
 
@@ -249,12 +274,13 @@ Return ONLY valid JSON with a "steps" array of objects, where each object has:
 - "description": detailed description of the machining step including specific fixturing requirements
 - "machine_id": ID of selected machine from our inventory (or null if unavailable)
 - "machine_name": exact name of selected machine from our inventory (or null if unavailable)
-- "tooling_id": ID of selected tool from our inventory (or null if unavailable)
-- "tool_name": exact name of selected tool from our inventory (or null if unavailable)
+- "tooling_id": ID of selected tool from our inventory that is available for the selected machine (or null if unavailable)
+- "tool_name": exact name of selected tool from our inventory that is available for the selected machine (or null if unavailable)
 - "time": estimated time in minutes
 - "cost": calculated cost
-- "unservable": boolean indicating if we can't perform this step
+- "unservable": boolean indicating if we can't perform this step due to missing machine or tool
 - "required_machine_type": machine type needed if unavailable (using standard naming)
+- "required_tool_type": tool type needed if unavailable (using standard naming)
 - "recommendation": purchase recommendation if needed
 - "fixture_requirements": specific fixturing needed for this step
 - "setup_description": description of how the part should be positioned/secured`;
@@ -264,6 +290,9 @@ Return ONLY valid JSON with a "steps" array of objects, where each object has:
 AVAILABLE MACHINES BY TYPE:
 ${JSON.stringify(machinesByType, null, 2)}
 
+AVAILABLE TOOLS BY MACHINE ID:
+${JSON.stringify(toolingByMachineId, null, 2)}
+
 AVAILABLE TOOLS BY MACHINE TYPE:
 ${JSON.stringify(toolingByMachineType, null, 2)}
 
@@ -273,14 +302,18 @@ ${JSON.stringify(toolTypesByMachineType, null, 2)}
 AVAILABLE MATERIALS:
 ${JSON.stringify(materials, null, 2)}
 
-IMPORTANT INSTRUCTIONS:
-1. Use EXACT machine names and tool names from the available inventory above
-2. For machine_id: use the actual machine ID from the AVAILABLE MACHINES list
-3. For tooling_id: use the actual tool ID from the AVAILABLE TOOLS list
-4. For machine_name: use the exact "name" field from the machines data
-5. For tool_name: use the exact "tool_name" field from the tooling data
-6. If a required machine type is not available, set machine_id to null and specify the required_machine_type using our standard naming convention
-7. If a required tool type is not available, set tooling_id to null and specify the tool type needed using our standard naming convention from the AVAILABLE TOOL TYPES
+CRITICAL INSTRUCTIONS FOR TOOL VALIDATION:
+1. When selecting a machine, you MUST check if the required tool is actually available for that specific machine
+2. Use the AVAILABLE TOOLS BY MACHINE ID data to verify tool availability for the selected machine
+3. If a tool is not available for the selected machine, you have two options:
+   a. Mark the step as unservable and specify the required tool type
+   b. Choose a different machine that has the required tool available
+4. Use EXACT machine names and tool names from the available inventory
+5. For machine_id: use the actual machine ID from the AVAILABLE MACHINES list
+6. For tooling_id: use the actual tool ID from the AVAILABLE TOOLS lists, but ONLY if that tool is available for the selected machine
+7. For machine_name: use the exact "name" field from the machines data
+8. For tool_name: use the exact "tool_name" field from the tooling data
+9. If a required tool type is not available for the selected machine, set tooling_id to null and specify the required tool type
 
 STANDARD MACHINE NAMING CONVENTION:
 - Use these exact machine type names: "Conventional Lathe", "CNC Lathe (Turning Center)", "Swiss-Type Lathe", "Turret Lathe", "Vertical Turret Lathe (VTL)", "Vertical Milling Machine", "Horizontal Milling Machine", "CNC Milling Center (3-axis)", "CNC Milling Center (4-axis)", "CNC Milling Center (5-axis)", "Bed-Type Milling Machine", "Knee-Type Milling Machine", "Gantry (Bridge) Milling Machine", "Drill Press (Bench or Floor)", "Radial Arm Drill", "CNC Drill/Tap Center", "Horizontal Boring Mill", "Vertical Boring Mill", "CNC Boring Machine", "Surface Grinder", "Cylindrical Grinder (OD Grinder)", "Internal Grinder (ID Grinder)", "Centerless Grinder", "Tool & Cutter Grinder", "Creep Feed Grinder", "Wire EDM", "Sinker (Ram) EDM", "Broaching Machine", "Honing Machine", "Lapping Machine", "Laser Cutting Machine", "Waterjet Cutting Machine", "Plasma Cutting Machine", "Ultrasonic Machining Center", "Electrochemical Machining (ECM) Machine", "CNC Router", "Additive/Subtractive Hybrid Machining Center", "3D Printer (for prototyping)", "CNC Laser Engraver"
@@ -307,18 +340,26 @@ I want you to think like an expert machinist with decades of experience:
    - Group similar operations that use the same tool to minimize tool changes
    - Identify when special fixturing or workholding devices would be needed
 
+4. TOOL AVAILABILITY VALIDATION:
+   - ALWAYS verify that the selected tool is actually available for the selected machine
+   - Check the AVAILABLE TOOLS BY MACHINE ID data to confirm tool-machine compatibility
+   - If the required tool is not available for the selected machine, either:
+     a. Choose a different machine that has the required tool
+     b. Mark the step as unservable and specify the required tool type
+
 For each machining step:
 1. Identify the required machine type using our standard naming convention
 2. Choose the most appropriate machine from our inventory (use exact machine name and ID)
-3. Choose the most appropriate tool from our inventory (use exact tool name and ID)
-4. If we don't have a suitable machine:
+3. Verify that the required tool is available for that specific machine using AVAILABLE TOOLS BY MACHINE ID
+4. Choose the most appropriate tool from our inventory that is available for the selected machine (use exact tool name and ID)
+5. If we don't have a suitable machine:
    a. Set machine_id to null and machine_name to null
    b. Mark the step as unservable
    c. Specify required_machine_type using our standard naming convention
    d. Provide a recommendation on what specific machine to purchase
-5. If we don't have a suitable tool:
+6. If we don't have a suitable tool for the selected machine:
    a. Set tooling_id to null and tool_name to null
-   b. Consider if the step is still serviceable with manual tooling or alternatives
+   b. Mark the step as unservable
    c. Specify the required tool type using our standard naming convention
    d. Provide a recommendation on what specific tool to purchase
 
@@ -329,12 +370,13 @@ Return ONLY valid JSON with a "steps" array of objects, where each object has:
 - "description": detailed description of the machining step including specific fixturing requirements
 - "machine_id": ID of selected machine from our inventory (or null if unavailable)
 - "machine_name": exact name of selected machine from our inventory (or null if unavailable)
-- "tooling_id": ID of selected tool from our inventory (or null if unavailable)
-- "tool_name": exact name of selected tool from our inventory (or null if unavailable)
+- "tooling_id": ID of selected tool from our inventory that is available for the selected machine (or null if unavailable)
+- "tool_name": exact name of selected tool from our inventory that is available for the selected machine (or null if unavailable)
 - "time": estimated time in minutes
 - "cost": calculated cost
-- "unservable": boolean indicating if we can't perform this step
+- "unservable": boolean indicating if we can't perform this step due to missing machine or tool
 - "required_machine_type": machine type needed if unavailable (using standard naming)
+- "required_tool_type": tool type needed if unavailable (using standard naming)
 - "recommendation": purchase recommendation if needed
 - "fixture_requirements": specific fixturing needed for this step
 - "setup_description": description of how the part should be positioned/secured`;
@@ -361,8 +403,9 @@ Return ONLY valid JSON with a "steps" array of objects, where each object has:
 5. Live tooling capabilities on lathes and mill-turn centers
 6. Efficient use of machine capabilities to minimize setup changes
 7. Comprehensive knowledge of machine types and tool types with proper naming conventions
+8. CRITICAL: Tool-machine compatibility verification - you MUST check that the selected tool is actually available for the selected machine
             
-Your goal is to create the most efficient machining plan possible, intelligently grouping operations by fixturing requirements and machine capabilities. You MUST use exact machine names and tool names from the provided inventory. When equipment is missing, use the standard naming conventions provided. Return ONLY valid JSON with no markdown formatting or explanations.`
+Your goal is to create the most efficient machining plan possible, intelligently grouping operations by fixturing requirements and machine capabilities. You MUST use exact machine names and tool names from the provided inventory. When equipment is missing, use the standard naming conventions provided. You MUST verify tool availability for each selected machine before assigning it to a step. Return ONLY valid JSON with no markdown formatting or explanations.`
           },
           {
             role: 'user',
@@ -456,6 +499,7 @@ Your goal is to create the most efficient machining plan possible, intelligently
             cost: step.cost || 0,
             unservable: step.status === "unservable" || step.unservable || false,
             required_machine_type: step.required_machine_type || null,
+            required_tool_type: step.required_tool_type || null,
             recommendation: step.recommendation || null,
             fixture_requirements: step.fixture_requirements || step.fixturing || null,
             setup_description: step.setup_description || step.setup || null
@@ -479,6 +523,7 @@ Your goal is to create the most efficient machining plan possible, intelligently
               cost: step.cost || 0,
               unservable: step.unservable || false,
               required_machine_type: step.required_machine_type || null,
+              required_tool_type: step.required_tool_type || null,
               recommendation: step.recommendation || null,
               fixture_requirements: step.fixture_requirements || step.fixturing || null,
               setup_description: step.setup_description || step.setup || null
@@ -515,7 +560,8 @@ Your goal is to create the most efficient machining plan possible, intelligently
         time: typeof step.time === 'string' ? parseFloat(step.time) : (step.time || 0),
         cost: typeof step.cost === 'string' ? parseFloat(step.cost) : (step.cost || 0),
         unservable: step.unservable || false,
-        required_machine_type: step.required_machine_type || (step.unservable ? "Unknown machine type" : null),
+        required_machine_type: step.required_machine_type || (step.unservable && !step.machine_id ? "Unknown machine type" : null),
+        required_tool_type: step.required_tool_type || (step.unservable && !step.tooling_id ? "Unknown tool type" : null),
         recommendation: step.recommendation || (step.unservable ? "Additional equipment needed" : null),
         fixture_requirements: step.fixture_requirements || step.fixturing || null,
         setup_description: step.setup_description || step.setup || null

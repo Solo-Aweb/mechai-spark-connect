@@ -20,7 +20,6 @@ import { formatDate, formatCurrency, formatTime } from "@/utils/formatters";
 import { ItineraryStep, Itinerary } from "@/types/itinerary";
 import { Loader2, AlertCircle, Info, ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ItineraryCardProps {
@@ -114,38 +113,38 @@ export const ItineraryCard = ({
           <div className="font-medium">Machine:</div>
           <div>
             {step.machine_name || (step.unservable ? (
-              <HoverCard>
-                <HoverCardTrigger asChild>
-                  <Badge variant="outline" className="bg-red-50 text-red-500 border-red-300 flex items-center gap-1 cursor-help">
-                    <AlertCircle className="h-3 w-3" /> Missing
-                  </Badge>
-                </HoverCardTrigger>
-                <HoverCardContent className="w-80">
-                  <div className="space-y-1">
-                    <p><strong>Required:</strong> {step.required_machine_type || "Unknown machine type"}</p>
-                    {step.recommendation && <p><strong>Recommendation:</strong> {step.recommendation}</p>}
-                  </div>
-                </HoverCardContent>
-              </HoverCard>
+              <div className="space-y-1">
+                <Badge variant="outline" className="bg-red-50 text-red-500 border-red-300 flex items-center gap-1 w-fit">
+                  <AlertCircle className="h-3 w-3" /> Missing
+                </Badge>
+                <div className="text-xs text-gray-600">
+                  <strong>Required:</strong> {step.required_machine_type || "Unknown machine type"}
+                  {step.recommendation && (
+                    <div className="mt-1">
+                      <strong>Recommendation:</strong> {step.recommendation}
+                    </div>
+                  )}
+                </div>
+              </div>
             ) : 'Unknown Machine')}
           </div>
           
           <div className="font-medium">Tool:</div>
           <div>
             {step.tool_name || (step.machine_id && !step.tooling_id ? (
-              <HoverCard>
-                <HoverCardTrigger asChild>
-                  <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-300 flex items-center gap-1 cursor-help">
-                    <Info className="h-3 w-3" /> Missing
-                  </Badge>
-                </HoverCardTrigger>
-                <HoverCardContent className="w-80">
-                  <div className="space-y-1">
-                    <p>The appropriate tool is not available for this operation.</p>
-                    {step.recommendation && <p><strong>Recommendation:</strong> {step.recommendation}</p>}
-                  </div>
-                </HoverCardContent>
-              </HoverCard>
+              <div className="space-y-1">
+                <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-300 flex items-center gap-1 w-fit">
+                  <Info className="h-3 w-3" /> Missing
+                </Badge>
+                <div className="text-xs text-gray-600">
+                  The appropriate tool is not available for this operation.
+                  {step.recommendation && (
+                    <div className="mt-1">
+                      <strong>Recommendation:</strong> {step.recommendation}
+                    </div>
+                  )}
+                </div>
+              </div>
             ) : 'N/A')}
           </div>
           
@@ -230,36 +229,36 @@ export const ItineraryCard = ({
                       </TableCell>
                       <TableCell>
                         {step.machine_name || (step.unservable ? (
-                          <HoverCard>
-                            <HoverCardTrigger asChild>
-                              <Badge variant="outline" className="bg-red-50 text-red-500 border-red-300 flex items-center gap-1 cursor-help">
-                                <AlertCircle className="h-3 w-3" /> Missing
-                              </Badge>
-                            </HoverCardTrigger>
-                            <HoverCardContent className="w-80">
-                              <div className="space-y-1">
-                                <p><strong>Required:</strong> {step.required_machine_type || "Unknown machine type"}</p>
-                                {step.recommendation && <p><strong>Recommendation:</strong> {step.recommendation}</p>}
-                              </div>
-                            </HoverCardContent>
-                          </HoverCard>
+                          <div className="space-y-1">
+                            <Badge variant="outline" className="bg-red-50 text-red-500 border-red-300 flex items-center gap-1 w-fit">
+                              <AlertCircle className="h-3 w-3" /> Missing
+                            </Badge>
+                            <div className="text-xs text-gray-600 max-w-48">
+                              <strong>Required:</strong> {step.required_machine_type || "Unknown machine type"}
+                              {step.recommendation && (
+                                <div className="mt-1">
+                                  <strong>Recommendation:</strong> {step.recommendation}
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         ) : 'Unknown Machine')}
                       </TableCell>
                       <TableCell>
                         {step.tool_name || (step.machine_id && !step.tooling_id ? (
-                          <HoverCard>
-                            <HoverCardTrigger asChild>
-                              <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-300 flex items-center gap-1 cursor-help">
-                                <Info className="h-3 w-3" /> Missing
-                              </Badge>
-                            </HoverCardTrigger>
-                            <HoverCardContent className="w-80">
-                              <div className="space-y-1">
-                                <p>The appropriate tool is not available for this operation.</p>
-                                {step.recommendation && <p><strong>Recommendation:</strong> {step.recommendation}</p>}
-                              </div>
-                            </HoverCardContent>
-                          </HoverCard>
+                          <div className="space-y-1">
+                            <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-300 flex items-center gap-1 w-fit">
+                              <Info className="h-3 w-3" /> Missing
+                            </Badge>
+                            <div className="text-xs text-gray-600 max-w-48">
+                              The appropriate tool is not available for this operation.
+                              {step.recommendation && (
+                                <div className="mt-1">
+                                  <strong>Recommendation:</strong> {step.recommendation}
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         ) : 'N/A')}
                       </TableCell>
                       <TableCell>{step.time || 'N/A'}</TableCell>

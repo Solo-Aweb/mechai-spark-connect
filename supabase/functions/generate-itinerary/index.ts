@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.0';
 
@@ -102,7 +101,7 @@ serve(async (req) => {
       });
     }
 
-    // Fetch all tooling with enhanced information including tool types
+    // Fetch all tooling with enhanced information including tool types and detailed parameters
     const { data: tooling, error: toolingError } = await supabase
       .from('tooling')
       .select(`
@@ -194,7 +193,7 @@ serve(async (req) => {
 AVAILABLE MACHINES BY TYPE:
 ${JSON.stringify(machinesByType, null, 2)}
 
-AVAILABLE TOOLS BY MACHINE ID (USER'S ACTUAL TOOLING INVENTORY):
+AVAILABLE TOOLS BY MACHINE ID (USER'S ACTUAL TOOLING INVENTORY WITH DETAILED PARAMETERS):
 ${JSON.stringify(toolingByMachineId, null, 2)}
 
 AVAILABLE TOOLS BY MACHINE TYPE:
@@ -212,26 +211,44 @@ CRITICAL TOOL VALIDATION RULES - READ CAREFULLY:
 
 2. **DO NOT USE TOOLS FROM DATABASE REFERENCE**: The "AVAILABLE TOOL TYPES BY MACHINE TYPE" is just a database reference of tool types that exist in the system. These are NOT available to the user unless they appear in the "AVAILABLE TOOLS BY MACHINE ID" data.
 
-3. **STRICT TOOL ASSIGNMENT RULES**:
+3. **STRICT TOOL ASSIGNMENT AND PARAMETER VALIDATION RULES**:
    - For machine_id: use the actual machine ID from the AVAILABLE MACHINES list
    - For tooling_id: use ONLY tool IDs that exist in "AVAILABLE TOOLS BY MACHINE ID" for the selected machine
    - For machine_name: use the exact "name" field from the machines data
    - For tool_name: use ONLY tool names that exist in "AVAILABLE TOOLS BY MACHINE ID" for the selected machine
+   - **VALIDATE TOOL PARAMETERS**: Check if the tool's diameter, length, material, and other parameters are suitable for the specific operation
+   - **PARAMETER REQUIREMENTS**: Each machining operation has specific parameter requirements:
+     * Drilling: Check drill bit diameter matches hole requirements, length is sufficient for depth
+     * Turning: Check insert geometry, material compatibility, cutting edge condition
+     * Milling: Check endmill diameter for feature size, length for reach, flute count for material
+     * Threading: Check thread pitch compatibility, tap size, and material suitability
 
-4. **MARKING TOOLS AS MISSING**:
-   - If a required tool type exists in the database but is NOT in the user's inventory for a specific machine, mark it as missing
-   - Set tooling_id to null and tool_name to null
-   - Set unservable to true
-   - Specify the required_tool_type
-   - Provide a specific recommendation for purchasing that tool type
+4. **TOOL PARAMETER VALIDATION PROCESS**:
+   - If a tool exists in the user's inventory but has inadequate parameters, mark as "parameter_mismatch"
+   - Set tooling_id to the existing tool ID but add parameter_issue: true
+   - Specify what parameter is inadequate and what is required
+   - Provide specific parameter recommendations for the operation
 
-5. **TOOL VALIDATION PROCESS**:
+5. **MARKING TOOLS WITH PARAMETER ISSUES**:
+   - If a tool exists but parameters don't match: set parameter_issue: true, specify inadequate_parameter and required_parameter
+   - If no suitable tool exists: set tooling_id to null and tool_name to null, set unservable to true
+   - Always provide specific recommendations with exact specifications
+
+6. **TOOL VALIDATION PROCESS**:
    a. Identify the required machine for the operation
    b. Check if that machine exists in the user's inventory
-   c. Identify the required tool type for the operation
+   c. Identify the required tool type and parameters for the operation
    d. Check if a tool of that type exists in "AVAILABLE TOOLS BY MACHINE ID" for the selected machine
-   e. If the tool exists in the user's inventory: assign it
-   f. If the tool does NOT exist in the user's inventory: mark as missing and provide recommendation
+   e. **NEW**: Validate if the tool's parameters are suitable for the specific operation requirements
+   f. If the tool exists with suitable parameters: assign it
+   g. If the tool exists but parameters are inadequate: mark parameter_issue and provide recommendations
+   h. If no suitable tool exists: mark as missing and provide recommendation
+
+PARAMETER VALIDATION EXAMPLES:
+- Drilling 6mm hole: Check if available drill bits have 6mm diameter and sufficient length
+- Face milling 50mm surface: Check if face mill diameter is appropriate (typically 1.5-2x surface width)
+- Turning 25mm diameter: Check if turning insert geometry and nose radius are suitable
+- Threading M8x1.25: Check if tap size matches exactly and material is compatible
 
 STANDARD MACHINE NAMING CONVENTION:
 - Use these exact machine type names: "Conventional Lathe", "CNC Lathe (Turning Center)", "Swiss-Type Lathe", "Turret Lathe", "Vertical Turret Lathe (VTL)", "Vertical Milling Machine", "Horizontal Milling Machine", "CNC Milling Center (3-axis)", "CNC Milling Center (4-axis)", "CNC Milling Center (5-axis)", "Bed-Type Milling Machine", "Knee-Type Milling Machine", "Gantry (Bridge) Milling Machine", "Drill Press (Bench or Floor)", "Radial Arm Drill", "CNC Drill/Tap Center", "Horizontal Boring Mill", "Vertical Boring Mill", "CNC Boring Machine", "Surface Grinder", "Cylindrical Grinder (OD Grinder)", "Internal Grinder (ID Grinder)", "Centerless Grinder", "Tool & Cutter Grinder", "Creep Feed Grinder", "Wire EDM", "Sinker (Ram) EDM", "Broaching Machine", "Honing Machine", "Lapping Machine", "Laser Cutting Machine", "Waterjet Cutting Machine", "Plasma Cutting Machine", "Ultrasonic Machining Center", "Electrochemical Machining (ECM) Machine", "CNC Router", "Additive/Subtractive Hybrid Machining Center", "3D Printer (for prototyping)", "CNC Laser Engraver"
@@ -242,12 +259,10 @@ For Mills: "Endmill", "Face Mill", "Ball Nose Endmill", "Chamfer Mill", "Slot Dr
 For Drilling: "Drill Bit", "Reamer", "Countersink", "Thread Mill", "Twist Drill", "Center Drill", "Step Drill", "Forstner Bit", "Counterbore", "Thread Tap"
 For Grinding: "Grinding Wheel (Aluminum Oxide)", "Grinding Wheel (Silicon Carbide)", "Diamond Dressing Tool"
 
-TOOL RECOMMENDATION EXAMPLES:
-- If facing operation needs a Face Mill: "Purchase a Face Mill with diameter 2-4 inches for the [Machine Name]"
-- If drilling needs a Drill Bit: "Purchase a Drill Bit set (1/16" to 1/2") suitable for the [Machine Name]"
-- If turning needs a Turning Insert: "Purchase CNMG or DNMG Turning Inserts compatible with the [Machine Name]"
-- If threading needs a Thread Tap: "Purchase a Thread Tap set (M3-M12 or #4-40 to 1/2"-13) for the [Machine Name]"
-- If contouring needs a Ball Nose Endmill: "Purchase a Ball Nose Endmill set (1/8" to 1/2") for the [Machine Name]"
+PARAMETER RECOMMENDATION EXAMPLES:
+- If drilling 8mm hole but only 6mm drill available: "Current drill bit (6mm) is too small. Purchase 8mm drill bit for the [Machine Name]"
+- If face milling 60mm surface but only 25mm face mill available: "Current face mill (25mm) is too small for efficient machining. Purchase 75-100mm face mill for the [Machine Name]"
+- If turning steel but only aluminum insert available: "Current turning insert is for aluminum. Purchase carbide insert suitable for steel machining on the [Machine Name]"
 
 I want you to think like an expert machinist with decades of experience:
 
@@ -268,30 +283,38 @@ I want you to think like an expert machinist with decades of experience:
    - Group similar operations that use the same tool to minimize tool changes
    - Identify when special fixturing or workholding devices would be needed
 
-4. STRICT TOOL INVENTORY VALIDATION:
+4. **COMPREHENSIVE TOOL AND PARAMETER VALIDATION**:
    - NEVER assign a tool that doesn't exist in the user's "AVAILABLE TOOLS BY MACHINE ID" inventory
    - Always cross-reference the selected machine ID with available tools for that specific machine
+   - **NEW**: Validate that tool parameters match operation requirements (diameter, length, material compatibility)
    - If a required tool type exists in the database but not in the user's inventory, mark as unservable
-   - Provide specific tool recommendations with exact specifications when tools are missing
+   - If a tool exists but parameters are inadequate, mark as parameter_issue with specific recommendations
+   - Provide specific tool and parameter recommendations with exact specifications when needed
 
 For each machining step:
 1. Identify the required machine type using our standard naming convention
 2. Choose the most appropriate machine from our inventory (use exact machine name and ID)
-3. Identify the required tool type for the operation
+3. Identify the required tool type and specific parameters for the operation
 4. Check if a tool of that type exists in "AVAILABLE TOOLS BY MACHINE ID" for the selected machine
-5. If the tool exists in the user's inventory: assign it with exact tool name and ID
-6. If the tool does NOT exist in the user's inventory:
+5. **NEW**: Validate if the tool's parameters are suitable for the specific operation requirements
+6. If the tool exists with suitable parameters: assign it with exact tool name and ID
+7. If the tool exists but parameters are inadequate:
+   a. Set tooling_id to the existing tool ID and tool_name to the existing tool name
+   b. Set parameter_issue to true
+   c. Specify inadequate_parameter (what's wrong) and required_parameter (what's needed)
+   d. Provide a SPECIFIC parameter recommendation
+8. If no suitable tool exists:
    a. Set tooling_id to null and tool_name to null
    b. Mark the step as unservable
    c. Specify the required tool type using our standard naming convention
    d. Provide a SPECIFIC tool recommendation with exact specifications
-7. If we don't have a suitable machine:
+9. If we don't have a suitable machine:
    a. Set machine_id to null and machine_name to null
    b. Mark the step as unservable
    c. Specify required_machine_type using our standard naming convention
    d. Provide a specific recommendation on what machine to purchase with model suggestions
 
-IMPORTANT: A tool can only be used if it appears in the user's "AVAILABLE TOOLS BY MACHINE ID" inventory for the specific machine being used. Do not use tools that exist in the database but are not assigned to the user's machines.
+IMPORTANT: A tool can only be assigned if it appears in the user's "AVAILABLE TOOLS BY MACHINE ID" inventory for the specific machine being used AND has suitable parameters for the operation. Tools with inadequate parameters should be marked with parameter_issue.
 
 Return ONLY valid JSON with a "steps" array of objects, where each object has:
 - "description": detailed description of the machining step including specific fixturing requirements
@@ -302,6 +325,9 @@ Return ONLY valid JSON with a "steps" array of objects, where each object has:
 - "time": estimated time in minutes
 - "cost": calculated cost
 - "unservable": boolean indicating if we can't perform this step due to missing machine or tool
+- "parameter_issue": boolean indicating if tool exists but parameters are inadequate
+- "inadequate_parameter": description of what parameter is inadequate (if parameter_issue is true)
+- "required_parameter": description of what parameter is required (if parameter_issue is true)
 - "required_machine_type": machine type needed if unavailable (using standard naming)
 - "required_tool_type": tool type needed if unavailable (using standard naming)
 - "recommendation": SPECIFIC purchase recommendation with exact tool specifications and sizes if needed
@@ -313,7 +339,7 @@ Return ONLY valid JSON with a "steps" array of objects, where each object has:
 AVAILABLE MACHINES BY TYPE:
 ${JSON.stringify(machinesByType, null, 2)}
 
-AVAILABLE TOOLS BY MACHINE ID (USER'S ACTUAL TOOLING INVENTORY):
+AVAILABLE TOOLS BY MACHINE ID (USER'S ACTUAL TOOLING INVENTORY WITH DETAILED PARAMETERS):
 ${JSON.stringify(toolingByMachineId, null, 2)}
 
 AVAILABLE TOOLS BY MACHINE TYPE:
@@ -331,26 +357,44 @@ CRITICAL TOOL VALIDATION RULES - READ CAREFULLY:
 
 2. **DO NOT USE TOOLS FROM DATABASE REFERENCE**: The "AVAILABLE TOOL TYPES BY MACHINE TYPE" is just a database reference of tool types that exist in the system. These are NOT available to the user unless they appear in the "AVAILABLE TOOLS BY MACHINE ID" data.
 
-3. **STRICT TOOL ASSIGNMENT RULES**:
+3. **STRICT TOOL ASSIGNMENT AND PARAMETER VALIDATION RULES**:
    - For machine_id: use the actual machine ID from the AVAILABLE MACHINES list
    - For tooling_id: use ONLY tool IDs that exist in "AVAILABLE TOOLS BY MACHINE ID" for the selected machine
    - For machine_name: use the exact "name" field from the machines data
    - For tool_name: use ONLY tool names that exist in "AVAILABLE TOOLS BY MACHINE ID" for the selected machine
+   - **VALIDATE TOOL PARAMETERS**: Check if the tool's diameter, length, material, and other parameters are suitable for the specific operation
+   - **PARAMETER REQUIREMENTS**: Each machining operation has specific parameter requirements:
+     * Drilling: Check drill bit diameter matches hole requirements, length is sufficient for depth
+     * Turning: Check insert geometry, material compatibility, cutting edge condition
+     * Milling: Check endmill diameter for feature size, length for reach, flute count for material
+     * Threading: Check thread pitch compatibility, tap size, and material suitability
 
-4. **MARKING TOOLS AS MISSING**:
-   - If a required tool type exists in the database but is NOT in the user's inventory for a specific machine, mark it as missing
-   - Set tooling_id to null and tool_name to null
-   - Set unservable to true
-   - Specify the required_tool_type
-   - Provide a specific recommendation for purchasing that tool type
+4. **TOOL PARAMETER VALIDATION PROCESS**:
+   - If a tool exists in the user's inventory but has inadequate parameters, mark as "parameter_mismatch"
+   - Set tooling_id to the existing tool ID but add parameter_issue: true
+   - Specify what parameter is inadequate and what is required
+   - Provide specific parameter recommendations for the operation
 
-5. **TOOL VALIDATION PROCESS**:
+5. **MARKING TOOLS WITH PARAMETER ISSUES**:
+   - If a tool exists but parameters don't match: set parameter_issue: true, specify inadequate_parameter and required_parameter
+   - If no suitable tool exists: set tooling_id to null and tool_name to null, set unservable to true
+   - Always provide specific recommendations with exact specifications
+
+6. **TOOL VALIDATION PROCESS**:
    a. Identify the required machine for the operation
    b. Check if that machine exists in the user's inventory
-   c. Identify the required tool type for the operation
+   c. Identify the required tool type and parameters for the operation
    d. Check if a tool of that type exists in "AVAILABLE TOOLS BY MACHINE ID" for the selected machine
-   e. If the tool exists in the user's inventory: assign it
-   f. If the tool does NOT exist in the user's inventory: mark as missing and provide recommendation
+   e. **NEW**: Validate if the tool's parameters are suitable for the specific operation requirements
+   f. If the tool exists with suitable parameters: assign it
+   g. If the tool exists but parameters are inadequate: mark parameter_issue and provide recommendations
+   h. If no suitable tool exists: mark as missing and provide recommendation
+
+PARAMETER VALIDATION EXAMPLES:
+- Drilling 6mm hole: Check if available drill bits have 6mm diameter and sufficient length
+- Face milling 50mm surface: Check if face mill diameter is appropriate (typically 1.5-2x surface width)
+- Turning 25mm diameter: Check if turning insert geometry and nose radius are suitable
+- Threading M8x1.25: Check if tap size matches exactly and material is compatible
 
 STANDARD MACHINE NAMING CONVENTION:
 - Use these exact machine type names: "Conventional Lathe", "CNC Lathe (Turning Center)", "Swiss-Type Lathe", "Turret Lathe", "Vertical Turret Lathe (VTL)", "Vertical Milling Machine", "Horizontal Milling Machine", "CNC Milling Center (3-axis)", "CNC Milling Center (4-axis)", "CNC Milling Center (5-axis)", "Bed-Type Milling Machine", "Knee-Type Milling Machine", "Gantry (Bridge) Milling Machine", "Drill Press (Bench or Floor)", "Radial Arm Drill", "CNC Drill/Tap Center", "Horizontal Boring Mill", "Vertical Boring Mill", "CNC Boring Machine", "Surface Grinder", "Cylindrical Grinder (OD Grinder)", "Internal Grinder (ID Grinder)", "Centerless Grinder", "Tool & Cutter Grinder", "Creep Feed Grinder", "Wire EDM", "Sinker (Ram) EDM", "Broaching Machine", "Honing Machine", "Lapping Machine", "Laser Cutting Machine", "Waterjet Cutting Machine", "Plasma Cutting Machine", "Ultrasonic Machining Center", "Electrochemical Machining (ECM) Machine", "CNC Router", "Additive/Subtractive Hybrid Machining Center", "3D Printer (for prototyping)", "CNC Laser Engraver"
@@ -361,12 +405,10 @@ For Mills: "Endmill", "Face Mill", "Ball Nose Endmill", "Chamfer Mill", "Slot Dr
 For Drilling: "Drill Bit", "Reamer", "Countersink", "Thread Mill", "Twist Drill", "Center Drill", "Step Drill", "Forstner Bit", "Counterbore", "Thread Tap"
 For Grinding: "Grinding Wheel (Aluminum Oxide)", "Grinding Wheel (Silicon Carbide)", "Diamond Dressing Tool"
 
-TOOL RECOMMENDATION EXAMPLES:
-- If facing operation needs a Face Mill: "Purchase a Face Mill with diameter 2-4 inches for the [Machine Name]"
-- If drilling needs a Drill Bit: "Purchase a Drill Bit set (1/16" to 1/2") suitable for the [Machine Name]"
-- If turning needs a Turning Insert: "Purchase CNMG or DNMG Turning Inserts compatible with the [Machine Name]"
-- If threading needs a Thread Tap: "Purchase a Thread Tap set (M3-M12 or #4-40 to 1/2"-13) for the [Machine Name]"
-- If contouring needs a Ball Nose Endmill: "Purchase a Ball Nose Endmill set (1/8" to 1/2") for the [Machine Name]"
+PARAMETER RECOMMENDATION EXAMPLES:
+- If drilling 8mm hole but only 6mm drill available: "Current drill bit (6mm) is too small. Purchase 8mm drill bit for the [Machine Name]"
+- If face milling 60mm surface but only 25mm face mill available: "Current face mill (25mm) is too small for efficient machining. Purchase 75-100mm face mill for the [Machine Name]"
+- If turning steel but only aluminum insert available: "Current turning insert is for aluminum. Purchase carbide insert suitable for steel machining on the [Machine Name]"
 
 I want you to think like an expert machinist with decades of experience:
 
@@ -387,30 +429,38 @@ I want you to think like an expert machinist with decades of experience:
    - Group similar operations that use the same tool to minimize tool changes
    - Identify when special fixturing or workholding devices would be needed
 
-4. STRICT TOOL INVENTORY VALIDATION:
+4. **COMPREHENSIVE TOOL AND PARAMETER VALIDATION**:
    - NEVER assign a tool that doesn't exist in the user's "AVAILABLE TOOLS BY MACHINE ID" inventory
    - Always cross-reference the selected machine ID with available tools for that specific machine
+   - **NEW**: Validate that tool parameters match operation requirements (diameter, length, material compatibility)
    - If a required tool type exists in the database but not in the user's inventory, mark as unservable
-   - Provide specific tool recommendations with exact specifications when tools are missing
+   - If a tool exists but parameters are inadequate, mark as parameter_issue with specific recommendations
+   - Provide specific tool and parameter recommendations with exact specifications when needed
 
 For each machining step:
 1. Identify the required machine type using our standard naming convention
 2. Choose the most appropriate machine from our inventory (use exact machine name and ID)
-3. Identify the required tool type for the operation
+3. Identify the required tool type and specific parameters for the operation
 4. Check if a tool of that type exists in "AVAILABLE TOOLS BY MACHINE ID" for the selected machine
-5. If the tool exists in the user's inventory: assign it with exact tool name and ID
-6. If the tool does NOT exist in the user's inventory:
+5. **NEW**: Validate if the tool's parameters are suitable for the specific operation requirements
+6. If the tool exists with suitable parameters: assign it with exact tool name and ID
+7. If the tool exists but parameters are inadequate:
+   a. Set tooling_id to the existing tool ID and tool_name to the existing tool name
+   b. Set parameter_issue to true
+   c. Specify inadequate_parameter (what's wrong) and required_parameter (what's needed)
+   d. Provide a SPECIFIC parameter recommendation
+8. If no suitable tool exists:
    a. Set tooling_id to null and tool_name to null
    b. Mark the step as unservable
    c. Specify the required tool type using our standard naming convention
    d. Provide a SPECIFIC tool recommendation with exact specifications
-7. If we don't have a suitable machine:
+9. If we don't have a suitable machine:
    a. Set machine_id to null and machine_name to null
    b. Mark the step as unservable
    c. Specify required_machine_type using our standard naming convention
    d. Provide a specific recommendation on what machine to purchase with model suggestions
 
-IMPORTANT: A tool can only be used if it appears in the user's "AVAILABLE TOOLS BY MACHINE ID" inventory for the specific machine being used. Do not use tools that exist in the database but are not assigned to the user's machines.
+IMPORTANT: A tool can only be assigned if it appears in the user's "AVAILABLE TOOLS BY MACHINE ID" inventory for the specific machine being used AND has suitable parameters for the operation. Tools with inadequate parameters should be marked with parameter_issue.
 
 Return ONLY valid JSON with a "steps" array of objects, where each object has:
 - "description": detailed description of the machining step including specific fixturing requirements
@@ -421,6 +471,9 @@ Return ONLY valid JSON with a "steps" array of objects, where each object has:
 - "time": estimated time in minutes
 - "cost": calculated cost
 - "unservable": boolean indicating if we can't perform this step due to missing machine or tool
+- "parameter_issue": boolean indicating if tool exists but parameters are inadequate
+- "inadequate_parameter": description of what parameter is inadequate (if parameter_issue is true)
+- "required_parameter": description of what parameter is required (if parameter_issue is true)
 - "required_machine_type": machine type needed if unavailable (using standard naming)
 - "required_tool_type": tool type needed if unavailable (using standard naming)
 - "recommendation": SPECIFIC purchase recommendation with exact tool specifications and sizes if needed
@@ -450,8 +503,9 @@ Return ONLY valid JSON with a "steps" array of objects, where each object has:
 6. Efficient use of machine capabilities to minimize setup changes
 7. Comprehensive knowledge of machine types and tool types with proper naming conventions
 8. CRITICAL: Strict tool inventory validation - you MUST ONLY use tools that exist in the user's "AVAILABLE TOOLS BY MACHINE ID" inventory. Tools that exist in the database but are not assigned to specific machines should be treated as unavailable and marked for purchase recommendations.
+9. **NEW: PARAMETER VALIDATION EXPERTISE** - You thoroughly validate that each tool's parameters (diameter, length, material compatibility, etc.) are suitable for the specific machining operation. When parameters are inadequate, you provide specific recommendations for the correct parameters needed.
             
-Your goal is to create the most efficient machining plan possible, intelligently grouping operations by fixturing requirements and machine capabilities. You MUST use exact machine names and tool names from the provided inventory. When equipment is missing, use the standard naming conventions provided. You MUST verify tool availability for each selected machine before assigning it to a step. A tool can ONLY be assigned if it appears in the user's actual tooling inventory for that specific machine. Return ONLY valid JSON with no markdown formatting or explanations.`
+Your goal is to create the most efficient machining plan possible, intelligently grouping operations by fixturing requirements and machine capabilities. You MUST use exact machine names and tool names from the provided inventory. When equipment is missing, use the standard naming conventions provided. You MUST verify tool availability AND parameter suitability for each selected machine before assigning it to a step. A tool can ONLY be assigned if it appears in the user's actual tooling inventory for that specific machine AND has appropriate parameters for the operation. Return ONLY valid JSON with no markdown formatting or explanations.`
           },
           {
             role: 'user',
@@ -544,6 +598,9 @@ Your goal is to create the most efficient machining plan possible, intelligently
             time: step.estimated_time || step.time || 0,
             cost: step.cost || 0,
             unservable: step.status === "unservable" || step.unservable || false,
+            parameter_issue: step.parameter_issue || false,
+            inadequate_parameter: step.inadequate_parameter || null,
+            required_parameter: step.required_parameter || null,
             required_machine_type: step.required_machine_type || null,
             required_tool_type: step.required_tool_type || null,
             recommendation: step.recommendation || null,
@@ -568,6 +625,9 @@ Your goal is to create the most efficient machining plan possible, intelligently
               time: step.time || 0,
               cost: step.cost || 0,
               unservable: step.unservable || false,
+              parameter_issue: step.parameter_issue || false,
+              inadequate_parameter: step.inadequate_parameter || null,
+              required_parameter: step.required_parameter || null,
               required_machine_type: step.required_machine_type || null,
               required_tool_type: step.required_tool_type || null,
               recommendation: step.recommendation || null,
@@ -606,6 +666,9 @@ Your goal is to create the most efficient machining plan possible, intelligently
         time: typeof step.time === 'string' ? parseFloat(step.time) : (step.time || 0),
         cost: typeof step.cost === 'string' ? parseFloat(step.cost) : (step.cost || 0),
         unservable: step.unservable || false,
+        parameter_issue: step.parameter_issue || false,
+        inadequate_parameter: step.inadequate_parameter || null,
+        required_parameter: step.required_parameter || null,
         required_machine_type: step.required_machine_type || (step.unservable && !step.machine_id ? "Unknown machine type" : null),
         required_tool_type: step.required_tool_type || (step.unservable && !step.tooling_id ? "Unknown tool type" : null),
         recommendation: step.recommendation || (step.unservable ? "Additional equipment needed" : null),

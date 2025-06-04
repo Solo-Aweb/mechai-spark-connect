@@ -1,23 +1,24 @@
 
-import { Json } from "@/integrations/supabase/types";
-
 export interface ItineraryStep {
   description: string;
-  machine_id: string | null;
-  tooling_id: string | null;
-  time: number;
-  cost: number;
-  unservable?: boolean;
-  machine_name?: string;
-  tool_name?: string;
+  machine_id?: string | null;
+  machine_name?: string | null;
+  tooling_id?: string | null;
+  tool_name?: string | null;
+  time?: number;
+  cost?: number;
   hourly_rate?: number;
   tool_wear_cost?: number;
   setup_cost?: number;
-  required_machine_type?: string;
-  required_tool_type?: string;
-  recommendation?: string;
-  fixture_requirements?: string;
-  setup_description?: string;
+  unservable?: boolean;
+  parameter_issue?: boolean;
+  inadequate_parameter?: string | null;
+  required_parameter?: string | null;
+  required_machine_type?: string | null;
+  required_tool_type?: string | null;
+  recommendation?: string | null;
+  fixture_requirements?: string | null;
+  setup_description?: string | null;
 }
 
 export interface ItinerarySteps {
@@ -33,11 +34,10 @@ export interface Itinerary {
   created_at: string;
 }
 
-// Interface matching the actual shape of data from Supabase
 export interface ItineraryFromSupabase {
   id: string;
   part_id: string;
-  steps: Json;
+  steps: string | ItinerarySteps | ItineraryStep[];
   total_cost: number;
   created_at: string;
 }

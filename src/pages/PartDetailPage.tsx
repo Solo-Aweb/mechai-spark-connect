@@ -101,6 +101,9 @@ const PartDetailPage = () => {
                 time: step.time || 0,
                 cost: step.cost || 0,
                 unservable: step.unservable || false,
+                parameter_issue: step.parameter_issue || false,
+                inadequate_parameter: step.inadequate_parameter || null,
+                required_parameter: step.required_parameter || null,
                 required_machine_type: step.required_machine_type || null,
                 required_tool_type: step.required_tool_type || null,
                 recommendation: step.recommendation || null,
@@ -121,6 +124,9 @@ const PartDetailPage = () => {
                 time: step.time || 0,
                 cost: step.cost || 0,
                 unservable: step.unservable || false,
+                parameter_issue: step.parameter_issue || false,
+                inadequate_parameter: step.inadequate_parameter || null,
+                required_parameter: step.required_parameter || null,
                 required_machine_type: step.required_machine_type || null,
                 required_tool_type: step.required_tool_type || null,
                 recommendation: step.recommendation || null,
@@ -187,6 +193,9 @@ const PartDetailPage = () => {
               hourly_rate: 25, // Example default value
               tool_wear_cost: 5, // Example default value
               setup_cost: 10, // Example default value
+              parameter_issue: step.parameter_issue || false,
+              inadequate_parameter: step.inadequate_parameter || null,
+              required_parameter: step.required_parameter || null,
               required_machine_type: step.required_machine_type || (step.unservable ? "Required machine type not specified" : null),
               required_tool_type: step.required_tool_type || (step.unservable ? "Required tool type not specified" : null),
               recommendation: step.recommendation || null,

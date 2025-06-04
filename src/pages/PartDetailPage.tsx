@@ -105,7 +105,9 @@ const PartDetailPage = () => {
                 required_machine_type: step.required_machine_type || null,
                 recommendation: step.recommendation || null,
                 fixture_requirements: step.fixture_requirements || null,
-                setup_description: step.setup_description || null
+                setup_description: step.setup_description || null,
+                machine_name: step.machine_name || null,
+                tool_name: step.tool_name || null
               })),
               total_cost: stepsObj.reduce((sum, step) => sum + (step.cost || 0), 0)
             };
@@ -122,7 +124,9 @@ const PartDetailPage = () => {
                 required_machine_type: step.required_machine_type || null,
                 recommendation: step.recommendation || null,
                 fixture_requirements: step.fixture_requirements || null,
-                setup_description: step.setup_description || null
+                setup_description: step.setup_description || null,
+                machine_name: step.machine_name || null,
+                tool_name: step.tool_name || null
               })),
               total_cost: stepsObj.total_cost || stepsObj.steps.reduce((sum, step) => sum + (step.cost || 0), 0)
             };
@@ -137,14 +141,18 @@ const PartDetailPage = () => {
           stepsData = { steps: [], total_cost: 0 };
         }
         
-        // Fetch machine and tool names for each step
+        // Enhanced steps to use machine_name and tool_name from AI response if available
         const enhancedSteps = await Promise.all(
           stepsData.steps.map(async (step) => {
             let machineData = null;
             let toolData = null;
             
-            // Fetch machine details if machine_id exists
-            if (step.machine_id) {
+            // Use AI-provided names first, fallback to database lookup
+            let finalMachineName = step.machine_name;
+            let finalToolName = step.tool_name;
+            
+            // If machine_name not provided by AI but machine_id exists, fetch from database
+            if (!finalMachineName && step.machine_id) {
               const { data: machine } = await supabase
                 .from('machines')
                 .select('name')
@@ -152,12 +160,13 @@ const PartDetailPage = () => {
                 .single();
                 
               if (machine) {
+                finalMachineName = machine.name;
                 machineData = machine;
               }
             }
             
-            // Fetch tool details if tooling_id exists
-            if (step.tooling_id) {
+            // If tool_name not provided by AI but tooling_id exists, fetch from database
+            if (!finalToolName && step.tooling_id) {
               const { data: tool } = await supabase
                 .from('tooling')
                 .select('tool_name')
@@ -165,14 +174,15 @@ const PartDetailPage = () => {
                 .single();
                 
               if (tool) {
+                finalToolName = tool.tool_name;
                 toolData = tool;
               }
             }
             
             return {
               ...step,
-              machine_name: machineData?.name || step.machine_name || step.machine_id,
-              tool_name: toolData?.tool_name || step.tool_name || step.tooling_id,
+              machine_name: finalMachineName || step.machine_id,
+              tool_name: finalToolName || step.tooling_id,
               hourly_rate: 25, // Example default value
               tool_wear_cost: 5, // Example default value
               setup_cost: 10, // Example default value

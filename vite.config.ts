@@ -28,17 +28,13 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: {
     // Tell Vite to skip trying to optimize opencascade.js
     exclude: ['opencascade.js'],
+    include: ['opencascade.js/dist/opencascade.full.js']
   },
   build: {
     target: 'esnext', // Required for WebAssembly support
     assetsInlineLimit: 0, // Don't inline WebAssembly files
     sourcemap: true, // Enable sourcemaps for debugging
     rollupOptions: {
-      // Mark opencascade imports as external during build
-      external: [
-        /^opencascade\.js/,
-        /\.wasm$/
-      ],
       output: {
         // Prevent mangling of WASM import names
         manualChunks: {},

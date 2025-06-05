@@ -2,7 +2,7 @@
 declare module 'opencascade.js/dist/opencascade.full.js' {
   // Configuration options for the OpenCascade initializer
   interface OpenCascadeInitOptions {
-    locateFile?: (path: string, scriptDirectory: string) => string;
+    locateFile?: (path: string, scriptDirectory?: string) => string;
     [key: string]: any;
   }
   

@@ -5,8 +5,8 @@ export default async function OpenCascadeInstance() {
   try {
     console.log('Attempting to load OpenCascade.js WebAssembly module...');
     
-    // Import the module dynamically at runtime
-    const opencascadeModule = await import('opencascade.js');
+    // Import the module dynamically with the correct path
+    const opencascadeModule = await import('opencascade.js/dist/opencascade.full.js');
     
     // Get the initializer function
     const opencascade = opencascadeModule.default;
@@ -18,8 +18,11 @@ export default async function OpenCascadeInstance() {
       // This tells OpenCascade how to find its WASM file
       locateFile: (path) => {
         console.log('OpenCascade is looking for file:', path);
-        // Make sure it gets the correct path from node_modules
-        return `./node_modules/opencascade.js/dist/${path}`;
+        // Return the correct path for the WASM file
+        if (path.endsWith('.wasm')) {
+          return `https://unpkg.com/opencascade.js@1.1.1/dist/${path}`;
+        }
+        return path;
       }
     });
     

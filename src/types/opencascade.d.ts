@@ -20,6 +20,13 @@ declare module 'opencascade.js/dist/opencascade.full.js' {
   export default function(options?: OpenCascadeInitOptions): Promise<OpenCascadeInstance>;
 }
 
+// Global declaration for runtime loaded OpenCascade
+declare global {
+  interface Window {
+    opencascade?: (options?: any) => Promise<any>;
+  }
+}
+
 // Allow importing WASM file directly with URL query
 declare module '*.wasm?url' {
   const src: string;

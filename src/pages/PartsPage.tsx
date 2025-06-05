@@ -20,6 +20,7 @@ interface Part {
   name: string;
   file_url: string | null;
   svg_url: string | null;
+  user_id: string;
   upload_date: string;
 }
 
@@ -43,6 +44,16 @@ const PartsPage = () => {
   const fetchParts = async () => {
     try {
       setLoading(true);
+      
+      // Get the authenticated user first
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast("Error", {
+          description: 'Please log in to view your parts'
+        });
+        return;
+      }
+
       const { data, error } = await supabase
         .from('parts')
         .select('*')

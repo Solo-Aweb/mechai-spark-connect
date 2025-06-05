@@ -57,6 +57,7 @@ type Material = {
     thickness?: number;
   };
   unit_cost: number;
+  user_id: string;
   created_at: string;
 };
 
@@ -87,6 +88,15 @@ export default function MaterialsPage() {
     queryFn: async () => {
       try {
         console.log("Fetching materials");
+        
+        // Get the authenticated user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          console.error("User not authenticated");
+          setError("Please log in to view your materials.");
+          return [];
+        }
+
         const { data, error } = await supabase
           .from("materials")
           .select("*")
@@ -113,12 +123,19 @@ export default function MaterialsPage() {
   const addMaterialMutation = useMutation({
     mutationFn: async (values: MaterialFormValues) => {
       try {
+        // Get the authenticated user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          throw new Error("User not authenticated");
+        }
+
         // Fix to ensure all required fields are properly set
         const materialData = {
           name: values.name,
           stock_type: values.stock_type,
           unit_cost: values.unit_cost,
-          dimensions: values.dimensions as Json
+          dimensions: values.dimensions as Json,
+          user_id: user.id
         };
         
         const { data, error } = await supabase

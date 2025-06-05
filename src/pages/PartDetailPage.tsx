@@ -37,6 +37,15 @@ const PartDetailPage = () => {
     
     try {
       setLoading(true);
+      
+      // Get the authenticated user first
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Please log in to view part details');
+        navigate('/login');
+        return;
+      }
+
       const { data, error } = await supabase
         .from('parts')
         .select('*')

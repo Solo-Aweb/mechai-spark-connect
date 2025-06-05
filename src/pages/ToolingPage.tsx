@@ -23,6 +23,7 @@ type Tool = {
   cost: number | null;
   replacement_cost: number | null;
   params: Record<string, any> | null;
+  user_id: string;
   created_at: string;
   machines: { name: string; type: string } | null;
   tool_types?: { name: string } | null;
@@ -33,6 +34,7 @@ type Machine = {
   id: string;
   name: string;
   type: string;
+  user_id: string | null;
 };
 
 export default function ToolingPage() {
@@ -48,6 +50,15 @@ export default function ToolingPage() {
     queryFn: async () => {
       try {
         console.log("Fetching tools with machineId:", selectedMachineId);
+        
+        // Get the authenticated user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          console.error("User not authenticated");
+          setError("Please log in to view your tools.");
+          return [];
+        }
+
         let query = supabase
           .from("tooling")
           .select(`
@@ -94,9 +105,17 @@ export default function ToolingPage() {
     queryFn: async () => {
       try {
         console.log("Fetching machines for dropdown");
+        
+        // Get the authenticated user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          console.error("User not authenticated");
+          return [];
+        }
+
         const { data, error } = await supabase
           .from("machines")
-          .select("id, name, type")
+          .select("id, name, type, user_id")
           .order("name");
   
         if (error) {

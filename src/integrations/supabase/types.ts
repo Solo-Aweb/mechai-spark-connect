@@ -52,6 +52,7 @@ export type Database = {
           setup_cost: number | null
           spindle_rpm: number
           type: string
+          user_id: string | null
           x_range: number
           y_range: number
           z_range: number
@@ -66,6 +67,7 @@ export type Database = {
           setup_cost?: number | null
           spindle_rpm: number
           type: string
+          user_id?: string | null
           x_range: number
           y_range: number
           z_range: number
@@ -80,6 +82,7 @@ export type Database = {
           setup_cost?: number | null
           spindle_rpm?: number
           type?: string
+          user_id?: string | null
           x_range?: number
           y_range?: number
           z_range?: number
@@ -94,6 +97,7 @@ export type Database = {
           name: string
           stock_type: Database["public"]["Enums"]["material_stock_type"]
           unit_cost: number
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -102,6 +106,7 @@ export type Database = {
           name: string
           stock_type: Database["public"]["Enums"]["material_stock_type"]
           unit_cost: number
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -110,6 +115,7 @@ export type Database = {
           name?: string
           stock_type?: Database["public"]["Enums"]["material_stock_type"]
           unit_cost?: number
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -150,6 +156,7 @@ export type Database = {
           machine_type: string
           name: string
           param_schema: Json
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -157,6 +164,7 @@ export type Database = {
           machine_type: string
           name: string
           param_schema: Json
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -164,6 +172,7 @@ export type Database = {
           machine_type?: string
           name?: string
           param_schema?: Json
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -181,6 +190,7 @@ export type Database = {
           replacement_cost: number | null
           tool_name: string
           tool_type_id: string | null
+          user_id: string | null
         }
         Insert: {
           cost?: number | null
@@ -195,6 +205,7 @@ export type Database = {
           replacement_cost?: number | null
           tool_name: string
           tool_type_id?: string | null
+          user_id?: string | null
         }
         Update: {
           cost?: number | null
@@ -209,6 +220,7 @@ export type Database = {
           replacement_cost?: number | null
           tool_name?: string
           tool_type_id?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {

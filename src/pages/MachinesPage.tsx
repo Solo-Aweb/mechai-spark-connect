@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AppLayout from "@/components/AppLayout";
@@ -22,32 +23,20 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { toast } from "@/components/ui/sonner";
-import { Plus, Edit, Trash2 } from "lucide-react";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import {
   Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from "@/components/ui/form";
+import { toast } from "@/components/ui/sonner";
+import { Plus, Edit } from "lucide-react";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { MachineTypeSelect } from "@/components/machines/MachineTypeSelect";
 import { EditMachineDialog } from "@/components/machines/EditMachineDialog";
-import { MachineTypeSelect, MACHINE_TYPES } from "@/components/machines/MachineTypeSelect";
 
 // Define the Machine type based on the database schema
 type Machine = {
@@ -62,20 +51,19 @@ type Machine = {
   hourly_rate: number | null;
   setup_cost: number | null;
   operating_cost: number | null;
+  user_id: string | null;
   created_at: string;
 };
 
-// Form schema for adding a new machine - updated to use enum for type
+// Form schema for adding a new machine
 const machineFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  type: z.enum(MACHINE_TYPES as [string, ...string[]], {
-    required_error: "Please select a machine type",
-  }),
-  axes: z.coerce.number().int().positive("Must be a positive integer"),
-  spindle_rpm: z.coerce.number().int().positive("Must be a positive integer"),
-  x_range: z.coerce.number().positive("Must be a positive number"),
-  y_range: z.coerce.number().positive("Must be a positive number"),
-  z_range: z.coerce.number().positive("Must be a positive number"),
+  type: z.string().min(1, "Type is required"),
+  axes: z.coerce.number().min(1, "Must have at least 1 axis"),
+  spindle_rpm: z.coerce.number().min(1, "Spindle RPM must be positive"),
+  x_range: z.coerce.number().min(0, "X range cannot be negative"),
+  y_range: z.coerce.number().min(0, "Y range cannot be negative"),
+  z_range: z.coerce.number().min(0, "Z range cannot be negative"),
   hourly_rate: z.coerce.number().min(0, "Hourly rate cannot be negative"),
   setup_cost: z.coerce.number().min(0, "Setup cost cannot be negative"),
   operating_cost: z.coerce.number().min(0, "Operating cost cannot be negative"),
@@ -89,8 +77,8 @@ export default function MachinesPage() {
   const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
   const queryClient = useQueryClient();
 
-  // Define the query to fetch machines
-  const { data: machines, isLoading, error } = useQuery({
+  // Query to fetch machines
+  const { data: machines, isLoading } = useQuery({
     queryKey: ["machines"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -99,50 +87,27 @@ export default function MachinesPage() {
         .order("created_at", { ascending: false });
 
       if (error) {
+        toast.error("Failed to fetch machines");
         throw new Error(error.message);
       }
       return data as Machine[];
     },
   });
 
-  // Mutation to delete a machine
-  const deleteMachineMutation = useMutation({
-    mutationFn: async (machineId: string) => {
-      const { error } = await supabase
-        .from("machines")
-        .delete()
-        .eq("id", machineId);
-
-      if (error) {
-        throw new Error(error.message);
-      }
-    },
-    onSuccess: () => {
-      toast.success("Machine deleted successfully");
-      queryClient.invalidateQueries({ queryKey: ["machines"] });
-    },
-    onError: (error: Error) => {
-      toast.error(`Error deleting machine: ${error.message}`);
-    },
-  });
-
-  // Fix the mutation to ensure all required fields are provided
+  // Mutation to add a new machine
   const addMachineMutation = useMutation({
-    mutationFn: async (newMachine: MachineFormValues) => {
-      // Ensure all required fields are explicitly set
+    mutationFn: async (values: MachineFormValues) => {
+      // Get the authenticated user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
       const machineData = {
-        name: newMachine.name,
-        type: newMachine.type,
-        axes: newMachine.axes,
-        spindle_rpm: newMachine.spindle_rpm,
-        x_range: newMachine.x_range,
-        y_range: newMachine.y_range,
-        z_range: newMachine.z_range,
-        hourly_rate: newMachine.hourly_rate,
-        setup_cost: newMachine.setup_cost,
-        operating_cost: newMachine.operating_cost
+        ...values,
+        user_id: user.id, // Automatically assign user_id
       };
-      
+
       const { data, error } = await supabase
         .from("machines")
         .insert([machineData])
@@ -169,9 +134,9 @@ export default function MachinesPage() {
     resolver: zodResolver(machineFormSchema),
     defaultValues: {
       name: "",
-      type: undefined,
+      type: "",
       axes: 3,
-      spindle_rpm: 10000,
+      spindle_rpm: 0,
       x_range: 0,
       y_range: 0,
       z_range: 0,
@@ -184,23 +149,11 @@ export default function MachinesPage() {
   const onSubmit = (values: MachineFormValues) => {
     addMachineMutation.mutate(values);
   };
-  
-  const handleEditClick = (machine: Machine) => {
+
+  const handleEditMachine = (machine: Machine) => {
     setSelectedMachine(machine);
     setIsEditDialogOpen(true);
   };
-
-  const handleDeleteClick = (machineId: string) => {
-    deleteMachineMutation.mutate(machineId);
-  };
-
-  if (error) {
-    return (
-      <AppLayout>
-        <div className="text-red-500">Error loading machines: {error.toString()}</div>
-      </AppLayout>
-    );
-  }
 
   return (
     <AppLayout>
@@ -226,7 +179,7 @@ export default function MachinesPage() {
                     <FormItem>
                       <FormLabel>Machine Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter machine name" {...field} />
+                        <Input placeholder="e.g., Haas VF-2" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -239,11 +192,7 @@ export default function MachinesPage() {
                     <FormItem>
                       <FormLabel>Machine Type</FormLabel>
                       <FormControl>
-                        <MachineTypeSelect
-                          value={field.value || ""}
-                          onValueChange={field.onChange}
-                          placeholder="Select machine type"
-                        />
+                        <MachineTypeSelect onValueChange={field.onChange} value={field.value} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -255,9 +204,9 @@ export default function MachinesPage() {
                     name="axes"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Number of Axes</FormLabel>
+                        <FormLabel>Axes</FormLabel>
                         <FormControl>
-                          <Input type="number" min="1" {...field} />
+                          <Input type="number" min="1" max="5" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -277,7 +226,6 @@ export default function MachinesPage() {
                     )}
                   />
                 </div>
-                
                 <div className="grid grid-cols-3 gap-4">
                   <FormField
                     control={form.control}
@@ -319,8 +267,6 @@ export default function MachinesPage() {
                     )}
                   />
                 </div>
-
-                <h3 className="text-lg font-medium mt-4">Cost Information</h3>
                 <div className="grid grid-cols-3 gap-4">
                   <FormField
                     control={form.control}
@@ -331,9 +277,6 @@ export default function MachinesPage() {
                         <FormControl>
                           <Input type="number" step="0.01" min="0" {...field} />
                         </FormControl>
-                        <FormDescription className="text-xs">
-                          Base hourly cost for the machine
-                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -347,9 +290,6 @@ export default function MachinesPage() {
                         <FormControl>
                           <Input type="number" step="0.01" min="0" {...field} />
                         </FormControl>
-                        <FormDescription className="text-xs">
-                          One-time cost for setup
-                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -363,15 +303,11 @@ export default function MachinesPage() {
                         <FormControl>
                           <Input type="number" step="0.01" min="0" {...field} />
                         </FormControl>
-                        <FormDescription className="text-xs">
-                          Additional cost per operation
-                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
-
                 <DialogFooter>
                   <Button
                     type="submit"
@@ -393,19 +329,15 @@ export default function MachinesPage() {
         </div>
       ) : (
         <Table>
-          <TableCaption>List of available CNC machines</TableCaption>
+          <TableCaption>List of available machines</TableCaption>
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Axes</TableHead>
               <TableHead>Spindle RPM</TableHead>
-              <TableHead>X Range (mm)</TableHead>
-              <TableHead>Y Range (mm)</TableHead>
-              <TableHead>Z Range (mm)</TableHead>
-              <TableHead>Hourly Rate ($)</TableHead>
-              <TableHead>Setup Cost ($)</TableHead>
-              <TableHead>Operating Cost ($)</TableHead>
+              <TableHead>Work Envelope (mm)</TableHead>
+              <TableHead>Hourly Rate</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -414,58 +346,29 @@ export default function MachinesPage() {
               machines.map((machine) => (
                 <TableRow key={machine.id}>
                   <TableCell className="font-medium">{machine.name}</TableCell>
-                  <TableCell>{machine.type}</TableCell>
+                  <TableCell className="capitalize">{machine.type}</TableCell>
                   <TableCell>{machine.axes}</TableCell>
-                  <TableCell>{machine.spindle_rpm}</TableCell>
-                  <TableCell>{machine.x_range}</TableCell>
-                  <TableCell>{machine.y_range}</TableCell>
-                  <TableCell>{machine.z_range}</TableCell>
-                  <TableCell>{machine.hourly_rate || 'N/A'}</TableCell>
-                  <TableCell>{machine.setup_cost || 'N/A'}</TableCell>
-                  <TableCell>{machine.operating_cost || 'N/A'}</TableCell>
+                  <TableCell>{machine.spindle_rpm.toLocaleString()}</TableCell>
                   <TableCell>
-                    <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleEditClick(machine)}
-                      >
-                        <Edit size={16} className="mr-1" />
-                        Edit
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="sm">
-                            <Trash2 size={16} className="mr-1" />
-                            Delete
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the machine
-                              "{machine.name}" and all associated data.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeleteClick(machine.id)}
-                              disabled={deleteMachineMutation.isPending}
-                            >
-                              {deleteMachineMutation.isPending ? "Deleting..." : "Delete"}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
+                    {machine.x_range} × {machine.y_range} × {machine.z_range}
+                  </TableCell>
+                  <TableCell>
+                    ${machine.hourly_rate?.toFixed(2) || '0.00'}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditMachine(machine)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={11} className="text-center">
+                <TableCell colSpan={7} className="text-center">
                   No machines found. Add a new machine to get started.
                 </TableCell>
               </TableRow>
@@ -473,7 +376,7 @@ export default function MachinesPage() {
           </TableBody>
         </Table>
       )}
-      
+
       <EditMachineDialog
         isOpen={isEditDialogOpen}
         setIsOpen={setIsEditDialogOpen}

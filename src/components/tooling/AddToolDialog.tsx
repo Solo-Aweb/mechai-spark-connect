@@ -174,6 +174,12 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
       try {
         console.log("AddDialog - Adding new tool with values:", values);
         
+        // Get the authenticated user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          throw new Error("User not authenticated");
+        }
+        
         const toolData = {
           tool_name: values.tool_name,
           machine_id: values.machine_id,
@@ -185,6 +191,7 @@ export function AddToolDialog({ isOpen, setIsOpen, machines }: AddToolDialogProp
           cost: values.cost,
           replacement_cost: values.replacement_cost,
           params: values.params || {},
+          user_id: user.id, // Automatically assign user_id
         };
         
         const { data, error } = await supabase

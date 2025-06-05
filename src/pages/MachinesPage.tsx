@@ -104,8 +104,17 @@ export default function MachinesPage() {
       }
 
       const machineData = {
-        ...values,
-        user_id: user.id, // Automatically assign user_id
+        name: values.name,
+        type: values.type,
+        axes: values.axes,
+        spindle_rpm: values.spindle_rpm,
+        x_range: values.x_range,
+        y_range: values.y_range,
+        z_range: values.z_range,
+        hourly_rate: values.hourly_rate,
+        setup_cost: values.setup_cost,
+        operating_cost: values.operating_cost,
+        user_id: user.id,
       };
 
       const { data, error } = await supabase

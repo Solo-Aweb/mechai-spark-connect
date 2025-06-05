@@ -1,9 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.0';
 
-const supabaseUrl = 'https://dhppkyaaedwpalnrwvmd.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRocHBreWFhZWR3cGFsbnJ3dm1kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcyMTUxMTcsImV4cCI6MjA2Mjc5MTExN30.A2tGRdpiLQT4o2LhraQr1lS22-e56SU552HJ_QmMgIg';
+const supabaseUrl = Deno.env.get('SUPABASE_URL');
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 const openaiApiKey = Deno.env.get('OPENAI_API_KEY') || '';
+
+// Validate required environment variables
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in environment variables");
+}
 
 // Add check for API key
 if (!openaiApiKey) {
@@ -22,6 +27,16 @@ serve(async (req) => {
   }
 
   try {
+    // Check if required environment variables are configured
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return new Response(JSON.stringify({ 
+        error: 'Server configuration error. Please contact administrator.' 
+      }), { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     // Check if OpenAI API key is configured
     if (!openaiApiKey) {
       return new Response(JSON.stringify({ 
@@ -50,8 +65,9 @@ serve(async (req) => {
       });
     }
 
-    // Initialize Supabase client with the user's JWT
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    // Initialize Supabase client with service role key for admin operations
+    // but still respect the user's JWT for RLS
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       global: { headers: { Authorization: authHeader } }
     });
 

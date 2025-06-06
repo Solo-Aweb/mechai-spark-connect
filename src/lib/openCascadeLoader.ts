@@ -1,7 +1,16 @@
 
 import { toast } from 'sonner';
 
-export default async function OpenCascadeInstance() {
+// Define the return type for our loader
+interface OpenCascadeInstance {
+  readSTEP: (buffer: ArrayBuffer) => any;
+  toThreejsMesh: (shape: any) => {
+    geometry: THREE.BufferGeometry;
+    mesh?: THREE.Mesh;
+  };
+}
+
+export default async function OpenCascadeInstance(): Promise<OpenCascadeInstance> {
   try {
     console.log('Attempting to load OpenCascade.js WebAssembly module...');
     
@@ -32,7 +41,7 @@ export default async function OpenCascadeInstance() {
               }
               return path;
             }
-          });
+          }) as OpenCascadeInstance;
           
           console.log('OpenCascade.js initialized successfully');
           resolve(oc);
